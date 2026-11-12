@@ -131,7 +131,7 @@ export function programRows(parts,board,order=assemblyOrder(parts.filter(p=>p.si
   return {step:i+1,ref,value:p.value||p.mpn||'',package:p.package||'',side:p.side||'top',grip:width,pickX:s.x,pickY:s.y,placeX:p.x,placeY:p.y,rot:((p.rot%360)+360)%360}});
 }
 export function toProgramCsv(rows,{board='',scale=1}={}){
- const lines=[`# semi-cobot gripper program${board?' · '+board:''} · units mm · origin board centre`,PROGRAM_HEADER.join(',')];
+ const lines=[`# Industriverse PCBA gripper program${board?' · '+board:''} · units mm · origin board centre`,PROGRAM_HEADER.join(',')];
  for(const r of rows){const tool=r.grip*scale>MAX_GAP-.04?'Vacuum':'Fingers';lines.push([r.step,r.ref,r.value,r.package,r.side,tool,mm(r.grip),mm(r.pickX),mm(r.pickY),mm(r.placeX),mm(r.placeY),mm(r.rot)].map(csvCell).join(','))}
  return lines.join('\n')+'\n';
 }

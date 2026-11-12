@@ -59,11 +59,3 @@ export function quotationOutlook(calcs,outlooks,customerTotal,method){
  });
 }
 
-export function enclosureSize(box,board){
- const positive=v=>Math.max(0,Number(v)||0);
- const margin=positive(box.clearance),wall=positive(box.wall);
- const boardWidth=positive(board.widthMm),boardDepth=positive(board.heightMm);
- const standoff=positive(box.standoff),component=positive(box.component),top=positive(box.top);
- const inner=[boardWidth+2*margin,boardDepth+2*margin,standoff+positive(box.pcbThickness)+component+top];
- return {boardWidth,boardDepth,standoff,component,inner,outer:inner.map(n=>n+2*wall)};
-}

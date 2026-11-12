@@ -14,6 +14,9 @@ const store={get:key=>info[key]||null,put:(key,value)=>{info[key]=value;try{mkdi
 // The shared inventory: Supabase when SUPABASE_URL and SUPABASE_SECRET_KEY are in .env, else each browser keeps its own.
 const db=storageConfig(process.env),inventory=db?.kind==='supabase'?inventoryBackend(db):null;
 if(db?.error==='publishable')console.warn('SUPABASE_SECRET_KEY holds the publishable key; the shared inventory stays off. Use the secret key.');
+// Port of the local API: PORT (or API_PORT) in .env or the shell, default 5174. The Vite dev proxy reads API_PORT,
+// so set API_PORT in the shell for both when moving the API off 5174.
+const PORT=Number(process.env.API_PORT||process.env.PORT)||5174;
 const BODY_LIMIT=8*1024*1024;
 // Collects a request body into a Buffer. Resolves null once the client sends more than BODY_LIMIT;
 // the rest of the upload is drained so the 413 reply still reaches the client.
@@ -25,6 +28,6 @@ createServer(async(req,res)=>{try{
   if(Number(req.headers['content-length'])>BODY_LIMIT){req.resume();return reply(res,413,{error:'Request body is too large.'})}
   body=await readBody(req);if(body===null)return reply(res,413,{error:'Request body is too large.'});
  }
- const response=await handleApi(new Request('http://localhost:5174'+req.url,{method:req.method,headers:req.headers,body}),process.env,fetch,store,auth,inventory)||new Response('Not found',{status:404});
+ const response=await handleApi(new Request('http://localhost:'+PORT+req.url,{method:req.method,headers:req.headers,body}),process.env,fetch,store,auth,inventory)||new Response('Not found',{status:404});
  res.writeHead(response.status,Object.fromEntries(response.headers));res.end(await response.text())
-}catch{res.writeHead(500);res.end('Internal server error')}}).listen(5174,'127.0.0.1',()=>console.log('semi-cobot API listening on http://127.0.0.1:5174'+(inventory?' · shared inventory: Supabase':' · inventory: each browser keeps its own')));
+}catch{res.writeHead(500);res.end('Internal server error')}}).listen(PORT,'127.0.0.1',()=>console.log('Industriverse PCBA API listening on http://127.0.0.1:'+PORT+(inventory?' · shared inventory: Supabase':' · inventory: each browser keeps its own')));

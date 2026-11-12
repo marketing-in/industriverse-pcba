@@ -1,4 +1,4 @@
-# semi-cobot placement template. One row per component, positions in millimetres from the board's bottom-left corner.
+# Industriverse PCBA placement template. One row per component, positions in millimetres from the board's bottom-left corner.
 # Ref = reference designator, Val = value or manufacturer part number, Package = footprint/package name, Rot = rotation in degrees (counter-clockwise), Side = top or bottom.
 Ref,Val,Package,PosX,PosY,Rot,Side
 U1,STM32F407VGT6,LQFP-100_14x14mm,50.000,33.000,0,top

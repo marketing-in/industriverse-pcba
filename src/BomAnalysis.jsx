@@ -6,7 +6,7 @@ const g1=v=>(Math.round(v*10)/10).toLocaleString('en-IN',{maximumFractionDigits:
 const int=v=>Math.round(v||0).toLocaleString('en-IN');
 const TYPES=[['connector','Connectors'],['inductor','Inductors'],['module','Modules / shields'],['switch','Switches'],['chip','ICs']];
 
-// BOM tool → Analysis: what this board needs on the floor. Everything comes from the board's own pads
+// BOM tool, Analysis step: what this board needs on the floor. Everything comes from the board's own pads
 // (the Gerber or KiCad files from the Bare PCB step) and the BOM lines; settings change the figures live.
 export default function BomAnalysis({board,rows,an,a,setA,setDnp,boards,money,typed,shownAmt,openLine}){
  const {paste,pins,cons,dnp}=an;
@@ -20,7 +20,7 @@ export default function BomAnalysis({board,rows,an,a,setA,setDnp,boards,money,ty
  const setCons=(k,p)=>setA({consumables:{...a.consumables,[k]:{...(a.consumables?.[k]||{}),...p}}});
  const noBoard=!board;
  return <div className="bom-analysis">
-  {noBoard&&<div className="studio-note warn"><TriangleAlert size={15}/> Paste, pins and solder joints come from the board's pads. Upload the Gerber (or KiCad / pick-and-place files) in Bare PCB to fill them; DNP, thermal paste, adhesive and consumables work without it.</div>}
+  {noBoard&&<div className="studio-note warn"><TriangleAlert size={16}/> Paste, pins and solder joints come from the board's pads. Upload the Gerber (or KiCad / pick-and-place files) in Bare PCB to fill them; DNP, thermal paste, adhesive and consumables work without it.</div>}
   <div className="an-summary" role="group" aria-label="Analysis summary">
    <div><small>Solder paste per board</small><strong>{g3(paste.perBoard)} g</strong><span>{paste.sides.map(s=>`${s.side} ${Math.round(s.stencilMm*1000)} µm`).join(' · ')||'no printed side'}</span></div>
    <div><small>Paste for {int(boards)} boards</small><strong>{g1(paste.perJob)} g</strong><span>{paste.jars} jar{paste.jars===1?'':'s'} of {int(paste.jarG)} g · {paste.lossPct}% losses</span></div>
@@ -30,10 +30,10 @@ export default function BomAnalysis({board,rows,an,a,setA,setDnp,boards,money,ty
   </div>
 
   <section className="panel an-sec" aria-label="Solder paste">
-   <div className="panel-heading"><div className="title-row"><Droplets size={17}/><h2>Solder paste</h2></div><small className="muted">aperture area × stencil thickness × transfer efficiency × 4.36 mg/mm³ (SAC305)</small></div>
+   <div className="panel-heading"><div className="title-row"><Droplets size={16}/><h2>Solder paste</h2></div><small className="muted">aperture area × stencil thickness × transfer efficiency × 4.36 mg/mm³ (SAC305)</small></div>
    {paste.sides.length>0?<table className="saved-table an-table"><thead><tr><th>Side</th><th className="numeric">Stencil</th><th className="numeric">Apertures</th><th className="numeric">Area ratio &lt; 0.66</th><th className="numeric">Aperture area</th><th className="numeric">Paste volume</th><th className="numeric">Grams</th></tr></thead>
     <tbody>{paste.sides.map(s=><tr key={s.side}><td>{s.side==='top'?'Top':'Bottom'}</td><td className="numeric">{Math.round(s.stencilMm*1000)} µm{s.stepUpMm?` + ${s.stepUp} at ${Math.round(s.stepUpMm*1000)} µm`:''}</td><td className="numeric">{int(s.apertures)}{s.windows?` (${s.windows} windowpane)`:''}</td><td className={'numeric '+(s.lowAr?'warn-text':'')}>{int(s.lowAr)}</td><td className="numeric">{g1(s.areaMm2)} mm²</td><td className="numeric">{g1(s.volumeMm3)} mm³</td><td className="numeric"><b>{g3(s.grams)} g</b></td></tr>)}
-     {paste.pipMm3>0&&<tr><td>Pin-in-paste</td><td className="numeric">—</td><td className="numeric">{int(paste.tht)} pins</td><td className="numeric">—</td><td className="numeric">—</td><td className="numeric">{g1(paste.pipMm3)} mm³</td><td className="numeric"><b>{g3(paste.pipGrams)} g</b></td></tr>}
+     {paste.pipMm3>0&&<tr><td>Pin-in-paste</td><td className="numeric"><em className="na">Not available</em></td><td className="numeric">{int(paste.tht)} pins</td><td className="numeric"><em className="na">Not available</em></td><td className="numeric"><em className="na">Not available</em></td><td className="numeric">{g1(paste.pipMm3)} mm³</td><td className="numeric"><b>{g3(paste.pipGrams)} g</b></td></tr>}
      <tr className="an-total"><td colSpan="6">Per board</td><td className="numeric"><b>{g3(paste.perBoard)} g</b></td></tr></tbody></table>
    :<p className="muted bom-off">{noBoard?'No board pads yet.':'This board has no SMD pads to print.'}</p>}
    <div className="an-grid">
@@ -50,42 +50,42 @@ export default function BomAnalysis({board,rows,an,a,setA,setDnp,boards,money,ty
   </section>
 
   <section className="panel an-sec" aria-label="Thermal paste and conductive adhesive">
-   <div className="panel-heading"><div className="title-row"><Layers size={17}/><h2>Thermal paste and conductive adhesive</h2></div><small className="muted">{g3(paste.thermalGrams)} g thermal · {g3(paste.adhesiveGrams)} g adhesive per board</small></div>
+   <div className="panel-heading"><div className="title-row"><Layers size={16}/><h2>Thermal paste and conductive adhesive</h2></div><small className="muted">{g3(paste.thermalGrams)} g thermal · {g3(paste.adhesiveGrams)} g adhesive per board</small></div>
    <div className="an-grid">
     <div className="an-box wide"><h3>Thermal paste under heatsinks</h3>
      {(a.thermal||[]).map((t,i)=><div key={i} className="an-row">{['name','w','h','bondMm','count'].map(k=><label key={k} className="an-field">{{name:'Part',w:'Width (mm)',h:'Length (mm)',bondMm:'Bond line (mm)',count:'Count'}[k]}<input type={k==='name'?'text':'number'} min="0" step="any" value={t[k]??''} onChange={e=>setA({thermal:a.thermal.map((x,j)=>j===i?{...x,[k]:k==='name'?e.target.value:e.target.value}:x)})}/></label>)}
-      <button type="button" className="icon-button" aria-label="Remove heatsink" onClick={()=>setA({thermal:a.thermal.filter((_,j)=>j!==i)})}><Trash2 size={14}/></button></div>)}
-     <button type="button" className="text-button" onClick={()=>setA({thermal:[...(a.thermal||[]),{name:'',w:20,h:20,bondMm:.1,count:1}]})}><Plus size={13}/>Add a heatsink</button>
+      <button type="button" className="icon-button" aria-label="Remove heatsink" onClick={()=>setA({thermal:a.thermal.filter((_,j)=>j!==i)})}><Trash2 size={16}/></button></div>)}
+     <button type="button" className="text-button" onClick={()=>setA({thermal:[...(a.thermal||[]),{name:'',w:20,h:20,bondMm:.1,count:1}]})}><Plus size={16}/>Add a heatsink</button>
      {priceField('Thermal paste price per g','thermalPrice',.5)}</div>
     <div className="an-box"><h3>Conductive adhesive</h3>{field('Dots per board',a.adhesive.dots,v=>setAdh({dots:num(v)}),{step:1})}{field('Volume per dot',a.adhesive.dotMm3,v=>setAdh({dotMm3:num(v)}),{unit:'mm³'})}{priceField('Price per g','adhesivePrice',2)}</div>
    </div>
   </section>
 
   <section className="panel an-sec" aria-label="Pin count">
-   <div className="panel-heading"><div className="title-row"><Cpu size={17}/><h2>Pin count</h2></div><small className="muted">{int(pins.pins)} pins on fitted parts: {int(pins.pinsTop)} top, {int(pins.pinsBottom)} bottom{pins.twoSided?' · two-sided board':''}</small></div>
+   <div className="panel-heading"><div className="title-row"><Cpu size={16}/><h2>Pin count</h2></div><small className="muted">{int(pins.pins)} pins on fitted parts: {int(pins.pinsTop)} top, {int(pins.pinsBottom)} bottom{pins.twoSided?' · two-sided board':''}</small></div>
    {pins.parts.length?<>
     <div className="an-grid"><div className="an-box"><h3>Most pins</h3><ul className="an-list">{pins.most.map(x=><li key={x.ref}><span className="mono">{x.ref}</span><span>{x.mpn||x.package}</span><b>{int(x.pins)}</b></li>)}</ul></div>
      <div className="an-box"><h3>By method</h3><ul className="an-list"><li><span>SMD (stencil)</span><b>{int(pins.smdPins)}</b></li><li><span>Through-hole ({a.pip?.on?'pin-in-paste':'wave / selective'})</span><b>{int(pins.thtPins)}</b></li><li><span>Solder joints</span><b>{int(pins.joints)}</b></li></ul></div></div>
     <div className="table-scroll"><table className="saved-table an-table"><thead><tr><th>Part number</th><th className="numeric">Parts</th><th className="numeric">Pins each</th><th className="numeric">Pins per board</th></tr></thead>
-     <tbody>{pins.lines.filter(l=>l.parts>0).map(l=><tr key={l.id} className={l.dnp?'an-dnp':''}><td><button type="button" className="link-button" onClick={()=>openLine(l.id)}>{l.mpn}</button>{l.dnp&&<span className="badge neutral"><span/>DNP</span>}</td><td className="numeric">{int(l.parts)}</td><td className="numeric">{l.pinsEach??'—'}</td><td className="numeric">{l.dnp?<em className="na">not fitted</em>:int(l.pins)}</td></tr>)}</tbody></table></div>
+     <tbody>{pins.lines.filter(l=>l.parts>0).map(l=><tr key={l.id} className={l.dnp?'an-dnp':''}><td><button type="button" className="link-button" onClick={()=>openLine(l.id)}>{l.mpn}</button>{l.dnp&&<span className="badge neutral"><span/>DNP</span>}</td><td className="numeric">{int(l.parts)}</td><td className="numeric">{l.pinsEach??<em className="na">Not available</em>}</td><td className="numeric">{l.dnp?<em className="na">not fitted</em>:int(l.pins)}</td></tr>)}</tbody></table></div>
    </>:<p className="muted bom-off">Pins come from the board's pads: upload the Gerber in Bare PCB.</p>}
   </section>
 
   <section className="panel an-sec" aria-label="DNP">
-   <div className="panel-heading"><div className="title-row"><CircleSlash size={17}/><h2>DNP: do not populate</h2><span className="count-label">{rows.filter(r=>r.dnp).length}</span></div><small className="muted">A DNP line stays on the BOM but is not bought, placed or printed.</small></div>
+   <div className="panel-heading"><div className="title-row"><CircleSlash size={16}/><h2>DNP: do not populate</h2><span className="count-label">{rows.filter(r=>r.dnp).length}</span></div><small className="muted">A DNP line stays on the BOM but is not bought, placed or printed.</small></div>
    <div className="table-scroll"><table className="saved-table an-table"><thead><tr><th>DNP</th><th>Part number</th><th>References</th><th className="numeric">Qty per board</th></tr></thead>
-    <tbody>{rows.map(r=><tr key={r.id} className={r.dnp?'an-dnp':''}><td><input type="checkbox" aria-label={`${r.mpn} do not populate`} checked={!!r.dnp} onChange={e=>setDnp(r.id,e.target.checked)}/></td><td>{r.mpn}</td><td className="mono an-refs">{(r.refs||[]).join(' ')||'—'}</td><td className="numeric">{int(r.qty)}</td></tr>)}</tbody></table></div>
+    <tbody>{rows.map(r=><tr key={r.id} className={r.dnp?'an-dnp':''}><td><input type="checkbox" aria-label={`${r.mpn} do not populate`} checked={!!r.dnp} onChange={e=>setDnp(r.id,e.target.checked)}/></td><td>{r.mpn}</td><td className="mono an-refs">{(r.refs||[]).join(' ')||<em className="na">Not available</em>}</td><td className="numeric">{int(r.qty)}</td></tr>)}</tbody></table></div>
   </section>
 
   <section className="panel an-sec" aria-label="Masking and coating">
-   <div className="panel-heading"><div className="title-row"><ShieldCheck size={17}/><h2>Masking and conformal coating</h2></div></div>
+   <div className="panel-heading"><div className="title-row"><ShieldCheck size={16}/><h2>Masking and conformal coating</h2></div></div>
    <div className="an-grid"><div className="an-box wide"><label className="check-inline"><input type="checkbox" checked={!!a.coating?.on} onChange={e=>setCoat({on:e.target.checked})}/>Conformal coating: mask the keep-outs (connectors, test points, switches) before coating, and remask after rework</label>
     {field('Keep-outs per board',a.coating?.keepouts??cons.keepouts,v=>setCoat({keepouts:v===''?null:num(v)}),{step:1})}{field('Dry film',a.coating?.filmUm??50,v=>setCoat({filmUm:num(v,50)}),{unit:'µm',step:5})}
     <small className="muted">Production shows the masking for this job and counts boards to remask from its rework.</small></div></div>
   </section>
 
   <section className="panel an-sec" aria-label="Consumables">
-   <div className="panel-heading"><div className="title-row"><Package size={17}/><h2>Consumables</h2></div><label className="check-inline"><input type="checkbox" checked={!!a.inQuote} onChange={e=>setA({inQuote:e.target.checked})}/>Add to the quotation</label></div>
+   <div className="panel-heading"><div className="title-row"><Package size={16}/><h2>Consumables</h2></div><label className="check-inline"><input type="checkbox" checked={!!a.inQuote} onChange={e=>setA({inQuote:e.target.checked})}/>Add to the quotation</label></div>
    <div className="table-scroll"><table className="saved-table an-table an-cons"><thead><tr><th>Use</th><th>Consumable</th><th className="numeric">Quantity</th><th className="numeric">Unit price ({money.currency})</th><th className="numeric">Per board</th><th className="numeric">For {int(boards)} boards</th></tr></thead>
     <tbody>{cons.rows.map(c=><tr key={c.key} className={c.on?'':'an-off'}><td><input type="checkbox" aria-label={`Use ${c.name}`} checked={c.on} onChange={e=>setCons(c.key,{on:e.target.checked})}/></td>
      <td>{c.name}<small className="muted"> {c.why}</small></td>

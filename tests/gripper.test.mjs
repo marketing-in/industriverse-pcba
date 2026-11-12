@@ -80,7 +80,7 @@ test('gripper program file round-trips, and plain placement files are accepted',
  const rows=programRows(parts,board);assert.deepEqual(rows.map(r=>r.ref),['R2','R10','C1','U1','J1'],'bottom-side parts are not in the top-side program');
  assert.equal(rows[3].rot,90);assert.equal(rows.find(r=>r.ref==='C1').rot,270);
  const csv=toProgramCsv(rows,{board:'Test, board',scale:.1});
- assert.match(csv,/^# semi-cobot gripper program/);assert.match(csv,/\nStep,Designator,Value,Package,Side,Tool,GripWidth\(mm\),PickX\(mm\),PickY\(mm\),PlaceX\(mm\),PlaceY\(mm\),Rotation\(deg\)\n/);
+ assert.match(csv,/^# Industriverse PCBA gripper program/);assert.match(csv,/\nStep,Designator,Value,Package,Side,Tool,GripWidth\(mm\),PickX\(mm\),PickY\(mm\),PlaceX\(mm\),PlaceY\(mm\),Rotation\(deg\)\n/);
  assert.match(csv,/\n4,U1,STM32,LQFP-48,top,Fingers,7\.000,[\d.]+,[-\d.]+,0\.000,0\.000,90\.000\n/);
  const refs=parts.map(p=>p.ref);
  assert.deepEqual(parseProgram(csv,refs).order,['R2','R10','C1','U1','J1']);

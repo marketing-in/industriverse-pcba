@@ -1,7 +1,7 @@
 {
-  "name": "semi-cobot",
+  "name": "industriverse-pcba",
   "version": "1.0.0",
-  "description": "",
+  "description": "Industriverse PCBA: a PCB assembly workspace in three lines. Engineering (board studio, SMT line), Supply (BOM tool, parts, purchases) and Production (jobs, dispatch).",
   "main": "index.js",
   "scripts": {
     "dev": "vite --host 127.0.0.1",

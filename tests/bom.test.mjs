@@ -52,13 +52,15 @@ test('INR and USD: conversion and formatting (Indian grouping, small unit prices
  assert.equal(formatMoney(1234.5,'INR',100),'₹1,23,450.00');assert.equal(formatMoney(1234.5,'USD',100),'$1,234.50');
  assert.equal(formatMoney(.0046,'USD',95,{unit:true}),'$0.0046');assert.equal(formatPlain(1234.5,'INR',100),'INR 1,23,450.00');assert.equal(formatMoney(NaN),'—');
 });
-test('the quotation PDF groups pricing and shows enclosure, shipping and scenario totals',async()=>{
+test('the quotation PDF groups pricing and shows bare PCB, shipping and scenario totals, and nothing else',async()=>{
  const {quotePdf}=await import('../src/quotePdf.js');
- const blob=await quotePdf({from:{company:'Semi Cobot Pvt Ltd',address:'Plot 4, Peenya\nBengaluru 560058',contact:'sales@example.com'},to:{customer:'Orion Boards',contact:'A. Rao'},number:'Q-20261030-123',date:'30 Oct 2026',validUntil:'14 Nov 2026',
-  currency:'INR',inrPerUsd:90,rateSource:'test',scope:'CTRL-01',boards:100,componentLines:1,pcb:{label:'4 layers, 100 x 67 mm',amount:200},enclosure:{label:'ABS plastic',amount:50},ranges:[{days:3,low:300,high:310},{days:9,low:300,high:325}],shipping:{free:false,amount:10,note:'Courier'},
-  totals:{componentsSell:40,pcbSell:200,sellingSubtotal:290,shippingCharged:10,customerTotal:300,perBoard:3,componentCost:31,netProfit:77.77},notes:'50% advance'});
+ const blob=await quotePdf({from:{company:'Orion Works Pvt Ltd',address:'Plot 4, Peenya\nBengaluru 560058',contact:'sales@example.com'},to:{customer:'Orion Boards',contact:'A. Rao'},number:'Q-20261030-123',date:'30 Oct 2026',validUntil:'14 Nov 2026',
+  currency:'INR',inrPerUsd:90,rateSource:'test',scope:'CTRL-01',boards:100,componentLines:1,pcb:{label:'4 layers, 100 x 67 mm',amount:200},enclosure:{label:'ABS plastic',amount:50},ranges:[{days:3,low:250,high:260},{days:9,low:250,high:275}],shipping:{free:false,amount:10,note:'Courier'},
+  totals:{componentsSell:40,pcbSell:200,sellingSubtotal:240,shippingCharged:10,customerTotal:250,perBoard:3,componentCost:31,netProfit:77.77},notes:'50% advance'});
  const text=Buffer.from(await blob.arrayBuffer()).toString('latin1');
- assert.ok(text.startsWith('%PDF'));for(const w of ['QUOTATION','Q-20261030-123','Orion Boards','Component package','Bare PCB','Enclosure','Shipping','INR 27,000.00','INR 3,600.00','In 3 days','In 9 days','50% advance'])assert.ok(text.includes(w),w);
+ assert.ok(text.startsWith('%PDF'));for(const w of ['Quotation','Q-20261030-123','Orion Boards','Component package','Bare PCB','Shipping','INR 22,500.00','INR 3,600.00','INR 23,400.00','INR 24,750.00','In 3 days','In 9 days','50% advance'])assert.ok(text.includes(w),w);
+ assert.ok(!/enclosure|mould|ABS plastic|QUOTATION/i.test(text.replace(/Quotation/g,'')),'an enclosure passed by an old caller is not printed or priced');
+ assert.ok(!text.includes('INR 27,000.00'),'the total has no enclosure amount');
  assert.ok(!text.includes('2,790.00')&&!text.includes('6,999.30'),'no internal cost or profit on the quote');
  const free=Buffer.from(await (await quotePdf({from:{company:'A'},to:{customer:'B'},number:'Q-1',date:'d',validUntil:'v',currency:'USD',inrPerUsd:90,scope:'S',boards:1,componentLines:1,pcb:null,shipping:{free:true,amount:0},totals:{componentsSell:5,pcbSell:0,sellingSubtotal:5,shippingCharged:0,customerTotal:5}})).arrayBuffer()).toString('latin1');
  assert.ok(free.includes('Free shipping')&&free.includes('Shipping is free of charge.'));
@@ -165,14 +167,26 @@ test('price history compares the same order size and applies scenario changes on
  assert.equal(partOutlook({...calc,orderQty:10},history.TEST).trendReady,false);
 });
 
-test('the enclosure has clearance around the PCB and tooling enters the total once',async()=>{
- const {enclosureSize}=await import('../src/bomPlanning.js');
- assert.deepEqual(enclosureSize({clearance:3,wall:2,standoff:5,pcbThickness:1.6,component:15,top:3},{widthMm:100,heightMm:67}).outer,[110,77,28.6]);
- const totals=quoteTotals([{missing:true,lineCost:10,lineSell:15}],{boards:100,enclosure:{on:true,unit:1.25,tooling:50,margin:20}});
- assert.equal(totals.enclosureCost,175);
- assert.equal(totals.customerTotal,210);
- assert.equal(totals.netProfit,35);
- assert.equal(totals.missing,1);
+test('quotation totals hold components, bare PCB, consumables and shipping only: no enclosure term',async()=>{
+ const planning=await import('../src/bomPlanning.js');assert.equal(planning.enclosureSize,undefined);
+ const calcs=[{lineCost:100,lineSell:120},{missing:true,lineCost:10,lineSell:15}];
+ const args={boards:100,pcb:{on:true,unit:1,margin:20},consumables:{on:true,cost:10,margin:0},inbound:5,deliveryCost:5};
+ const t=quoteTotals(calcs,args);
+ assert.equal(t.sellingSubtotal,120+120+10);assert.equal(t.customerTotal,260);assert.equal(t.netProfit,260-(100+100+10)-10);assert.equal(t.missing,1);
+ for(const k of Object.keys(t))assert.ok(!/enclos/i.test(k),k);
+ // An old caller that still passes an enclosure changes nothing.
+ assert.deepEqual(quoteTotals(calcs,{...args,enclosure:{on:true,unit:1.25,tooling:50,margin:20}}),t);
+});
+
+test('price provenance: the fixed words, the seller and the age of the price',async()=>{
+ const {priceNote,provenanceOf,priceAge}=await import('../src/bom.js');
+ const now=Date.parse('2026-11-12T12:00:00Z');
+ assert.equal(provenanceOf(null,{own:true}),'Own stock');assert.equal(provenanceOf({marketType:'authorized'}),'Authorised');assert.equal(provenanceOf({source:'digikey'}),'Authorised');
+ assert.equal(provenanceOf({marketType:'registered'}),'Registered vendor');assert.equal(provenanceOf({source:'serpapi'}),'Open market · unverified');assert.equal(provenanceOf({marketType:'broker'}),'Open market · unverified');
+ assert.deepEqual(priceNote({seller:'DigiKey',marketType:'authorized'},{at:'2026-11-12T10:00:00Z',now}),{text:'Authorised · DigiKey · fetched 2\u00a0h ago',warn:false});
+ assert.equal(priceNote({seller:'DigiKey',marketType:'authorized'},{at:'2026-11-10T10:00:00Z',now}).warn,true,'older than 24 h');
+ assert.equal(priceNote({seller:'Shop',source:'serpapi'},{at:'2026-11-12T11:59:50Z',now}).text,'Open market · unverified · Shop · fetched just now');
+ assert.equal(priceNote({seller:'Shop',source:'serpapi'},{now}).warn,true);assert.equal(priceNote(null),null);assert.deepEqual(priceAge(null),{text:'',stale:false});
 });
 
 test('bare PCB quote form: options follow the material, raise the estimate item by item and print on the quote',async()=>{

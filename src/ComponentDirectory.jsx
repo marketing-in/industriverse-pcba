@@ -66,13 +66,13 @@ export default function ComponentDirectory({boards=[],activeBoardId,boardModel=[
  const submit=async e=>{e.preventDefault();const term=query.trim();if(!term)return;const k=keyOf(term),hit=classed.find(r=>r.key===k);
   if(hit&&detailsOf(hit)){setSel(null);setSource('all');setOpen(k);return}
   const res=await lookup(term);if(!res)return;setSel(null);setSource('all');setQuery(res.info.mpn||term);setOpen(keyOf(res.info.mpn||term));
-  notify?.(res.from==='saved'?'Already saved':`${res.info.mpn||term} added to the databank`)};
+  notify?.(res.from==='saved'?'Already saved':`${res.info.mpn||term} added to the part master`)};
  const lookupMissing=async()=>{let next={...saved},n=0;for(const r of missing){setBusy(b=>new Set(b).add(r.key));
    try{const {info}=await lookupDetails(r.mpn,{saved:next,fetcher:(...a)=>fetch(...a)});next={...next,[r.key]:info};n++}catch(e){notify?.(`${r.mpn}: ${e.message}`)}finally{setBusy(b=>{const s=new Set(b);s.delete(r.key);return s})}}
   store(next);notify?.(`${n} part detail${n===1?'':'s'} saved`)};
- const fileName=ext=>`component-databank.${ext}`;
+ const fileName=ext=>`industriverse-pcba-part-master.${ext}`;
  // Exports cover what is shown: the whole databank, or the current category, source and search.
- const download=()=>{const data=exportJson({board:{id:'databank',name:'Component databank',width:0,height:0},rows:shown,saved,detailsOf}),blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'}),a=document.createElement('a');
+ const download=()=>{const data=exportJson({board:{id:'databank',name:'Part master',width:0,height:0},rows:shown,saved,detailsOf}),blob=new Blob([JSON.stringify(data,null,1)],{type:'application/json'}),a=document.createElement('a');
   a.href=URL.createObjectURL(blob);a.download=fileName('json');a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
  const downloadExcel=async()=>{try{const {default:ExcelJS}=await import('exceljs');const wb=buildWorkbook(ExcelJS,{board:null,rows:shown,detailsOf,nodes,counts});
   const blob=new Blob([await wb.xlsx.writeBuffer()],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=fileName('xlsx');a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
@@ -93,36 +93,36 @@ export default function ComponentDirectory({boards=[],activeBoardId,boardModel=[
   {!d&&!r.know&&<p className="muted">No details yet.{serpReady?' Look it up to search Google.':''}</p>}
   <small className="muted">{[...r.sources].map(s=>LABEL[s]).join(' · ')}{d?.fetchedAt?` · ${new Date(d.fetchedAt).toLocaleDateString()}`:''}</small></div>;
 
- return <section className="panel directory-panel" aria-label="Component databank">
-  <div className="panel-heading"><div className="title-row"><h2>Component databank</h2><span className="count-label">{fmt(classed.length)} parts</span>{knowledge?.from&&<small className="muted" title={knowledge.from==='supabase'?'The reference catalogue is read from the part_master table in Supabase.':'The reference catalogue bundled with the app. Load it into Supabase with scripts/push-part-master.mjs.'}>{knowledge.from==='supabase'?'Catalogue: Supabase':'Catalogue: bundled file'}</small>}</div>
-   <div className="panel-actions">{serpReady&&missing.length>0&&<button type="button" className="text-button" onClick={lookupMissing} disabled={busy.size>0}><Search size={14}/>Look up {missing.length} missing</button>}
-    <button type="button" className="text-button" onClick={downloadExcel}><FileSpreadsheet size={14}/>Export Excel</button>
-    <button type="button" className="text-button" onClick={()=>xlsRef.current?.click()}><Upload size={14}/>Import Excel</button><input ref={xlsRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-label="Import part details Excel" onChange={e=>{uploadExcel(e.target.files?.[0]);e.target.value=''}}/>
-    <button type="button" className="text-button" onClick={download}><Download size={14}/>Export JSON</button>
-    <button type="button" className="text-button" onClick={()=>fileRef.current?.click()}><Upload size={14}/>Import JSON</button><input ref={fileRef} type="file" accept=".json,application/json" hidden aria-label="Import part details JSON" onChange={e=>{upload(e.target.files?.[0]);e.target.value=''}}/></div></div>
+ return <section className="panel directory-panel" aria-label="Part master">
+  <div className="panel-heading"><div className="title-row"><h2>All parts</h2><span className="count-label">{fmt(classed.length)} parts</span>{knowledge?.from&&<small className="muted" title={knowledge.from==='supabase'?'The reference catalogue is read from the part_master table in Supabase.':'The reference catalogue bundled with the app. Load it into Supabase with scripts/push-part-master.mjs.'}>{knowledge.from==='supabase'?'Catalogue: Supabase':'Catalogue: bundled file'}</small>}</div>
+   <div className="panel-actions">{serpReady&&missing.length>0&&<button type="button" className="text-button" onClick={lookupMissing} disabled={busy.size>0}><Search size={16}/>Look up {missing.length} missing</button>}
+    <button type="button" className="text-button" onClick={downloadExcel}><FileSpreadsheet size={16}/>Export Excel</button>
+    <button type="button" className="text-button" onClick={()=>xlsRef.current?.click()}><Upload size={16}/>Import Excel</button><input ref={xlsRef} type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden aria-label="Import part details Excel" onChange={e=>{uploadExcel(e.target.files?.[0]);e.target.value=''}}/>
+    <button type="button" className="text-button" onClick={download}><Download size={16}/>Export JSON</button>
+    <button type="button" className="text-button" onClick={()=>fileRef.current?.click()}><Upload size={16}/>Import JSON</button><input ref={fileRef} type="file" accept=".json,application/json" hidden aria-label="Import part details JSON" onChange={e=>{upload(e.target.files?.[0]);e.target.value=''}}/></div></div>
   <div className="dir-bar">
-   <form className="list-search dir-search" onSubmit={submit}><Search size={14}/><input aria-label="Search the databank" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Part number, description, category…"/><button type="submit" className="button small" disabled={!query.trim()||busy.has(keyOf(query))}>{busy.has(keyOf(query))?'Searching…':'Look up'}</button></form>
+   <form className="list-search dir-search" onSubmit={submit}><Search size={16}/><input aria-label="Search the part master" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Part number, description, category…"/><button type="submit" className="button small" disabled={!query.trim()||busy.has(keyOf(query))}>{busy.has(keyOf(query))?'Searching…':'Look up'}</button></form>
    <div className="segmented" role="group" aria-label="Source">{SOURCES.map(([k,l])=><button type="button" key={k} aria-pressed={source===k} className={source===k?'active':''} onClick={()=>setSource(k)}>{l}</button>)}</div>
   </div>
   <div className="dir-body">
   <nav className="dir-tree" aria-label="Component categories">
    <div className="dir-tree-head"><strong>Categories</strong>{sel&&<button type="button" className="text-button" onClick={()=>setSel(null)}>All</button>}{!q&&<button type="button" className="text-button" onClick={()=>setExpanded(open0.size===catTotal?new Set():new Set(nodes.filter(n=>n.level===0).map(n=>n.category)))}>{open0.size===catTotal?'Collapse all':'Expand all'}</button>}</div>
    {!tax?<p className="muted dir-tree-empty">Loading categories…</p>:<ul>{treeNodes.map(n=>{const key=[n.category,n.type,n.subtype].filter(Boolean).join('|'),c=counts.get(key)||0;
-    return <li key={key} className={'lv'+n.level+(c?'':' empty')+(isSel(n)?' sel':'')}>{n.level===0&&!q&&<button type="button" className="dir-caret" aria-label={(open0.has(n.category)?'Collapse ':'Expand ')+n.category} aria-expanded={open0.has(n.category)} onClick={()=>toggle(n.category)}><ChevronDown size={13}/></button>}
+    return <li key={key} className={'lv'+n.level+(c?'':' empty')+(isSel(n)?' sel':'')}>{n.level===0&&!q&&<button type="button" className="dir-caret" aria-label={(open0.has(n.category)?'Collapse ':'Expand ')+n.category} aria-expanded={open0.has(n.category)} onClick={()=>toggle(n.category)}><ChevronDown size={16}/></button>}
      <button type="button" className="dir-node" aria-pressed={!!isSel(n)} onClick={()=>pick(n)}><span>{n.label}</span>{c>0&&<b>{fmt(c)}</b>}</button></li>})}
     {counts.get('')>0&&!q&&<li className={'lv0'+(sel?.unclassified?' sel':'')}><button type="button" className="dir-node" aria-pressed={!!sel?.unclassified} onClick={()=>setSel(sel?.unclassified?null:{unclassified:true})}><span>Unclassified</span><b>{fmt(counts.get(''))}</b></button></li>}
     {q&&!treeNodes.length&&<li className="muted dir-tree-empty">No category matches</li>}</ul>}
   </nav>
   <div className="dir-main"><div className="table-scroll"><table className="dir-table"><thead><tr><th>Part number</th><th>Category</th><th>Manufacturer</th><th>Description</th><th>Sources</th><th aria-label="Actions"/></tr></thead><tbody>
    {shown.slice(0,limit).map(r=>{const d=detailsOf(r),isOpen=open===r.key;return <React.Fragment key={r.key}>
-    <tr className={isOpen?'open':''}><td><button type="button" className="part-link" aria-expanded={isOpen} onClick={()=>setOpen(isOpen?null:r.key)}><ChevronDown size={14} className="dir-chev"/><span><strong>{r.mpn}</strong><small>{r.package||d?.package||r.type}</small></span></button></td>
+    <tr className={isOpen?'open':''}><td><button type="button" className="part-link" aria-expanded={isOpen} onClick={()=>setOpen(isOpen?null:r.key)}><ChevronDown size={16} className="dir-chev"/><span><strong>{r.mpn}</strong><small>{r.package||d?.package||r.type}</small></span></button></td>
      <td className="dir-cat">{r.cls.category?<><span>{r.cls.type} › {r.cls.subtype}</span><small className="price-note">{r.cls.category}</small></>:<span className="muted">Unclassified</span>}</td>
-     <td>{d?.manufacturer||<span className="muted">—</span>}</td><td className="dir-desc">{d?.description||<span className="muted">—</span>}</td>
+     <td>{d?.manufacturer||<em className="na">Not available</em>}</td><td className="dir-desc">{d?.description||<em className="na">Not available</em>}</td>
      <td className="dir-sources">{[...r.sources].map(s=><span key={s} className={'badge '+(s==='google'||s==='imported'||s==='added'?'green':'neutral')}>{LABEL[s]}</span>)}{!d&&serpReady&&<button type="button" className="text-button" onClick={()=>lookup(r.mpn)} disabled={busy.has(r.key)}>{busy.has(r.key)?'Searching…':'Look up'}</button>}</td>
-     <td className="dir-actions">{d?.datasheet&&<a className="inline-icon" href={d.datasheet} target="_blank" rel="noreferrer" aria-label={`Datasheet for ${r.mpn}`}><FileText size={15}/></a>}
-      {r.inv?<button type="button" className="icon-button" aria-label={`Open ${r.inv.mpn} in inventory`} onClick={()=>onOpenInventory(r.inv)}><ChevronRight size={17}/></button>:<button type="button" className="text-button" aria-label={`Add ${r.mpn} to inventory`} onClick={()=>onAdd(defaults(r,d))}><Plus size={14}/>Add</button>}</td></tr>
+     <td className="dir-actions">{d?.datasheet&&<a className="inline-icon" href={d.datasheet} target="_blank" rel="noreferrer" aria-label={`Datasheet for ${r.mpn}`}><FileText size={16}/></a>}
+      {r.inv?<button type="button" className="icon-button" aria-label={`Open ${r.inv.mpn} in inventory`} onClick={()=>onOpenInventory(r.inv)}><ChevronRight size={16}/></button>:<button type="button" className="text-button" aria-label={`Add ${r.mpn} to inventory`} onClick={()=>onAdd(defaults(r,d))}><Plus size={16}/>Add</button>}</td></tr>
     {isOpen&&<tr className="dir-open"><td colSpan={6}><Details r={r} d={d}/></td></tr>}</React.Fragment>})}
-   {!shown.length&&<tr><td colSpan={6} className="muted">{q?`“${query}” is not in the databank. Press Look up to search for it.`:'Nothing in this category.'}</td></tr>}
+   {!shown.length&&<tr><td colSpan={6} className="muted">{q?`“${query}” is not in the part master. Press Look up to search for it.`:'Nothing in this category.'}</td></tr>}
   </tbody></table></div>
   {shown.length>limit&&<div className="dir-more"><span className="muted">{fmt(limit)} of {fmt(shown.length)}</span><button type="button" className="button small" onClick={()=>setLimit(l=>l+PAGE*5)}>Show more</button></div>}
   </div></div>

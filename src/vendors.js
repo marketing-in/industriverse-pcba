@@ -8,8 +8,6 @@ export const VENDOR_KINDS=[
  {id:'distributor',label:'Distributors',short:'Distributor',about:'Authorised distributors. Those with an API key on the server price BOM lines live.'},
  {id:'passive',label:'Passive and electromechanical makers',short:'Passive',about:'Resistors, capacitors, inductors, connectors, relays and switches.'},
  {id:'pcb',label:'PCB fabricators',short:'PCB',about:'Bare board fabrication from Gerber files.'},
- {id:'enclosure',label:'Enclosure makers',short:'Enclosure',about:'Off-the-shelf plastic and metal housings.'},
- {id:'mould',label:'Mould makers and moulders',short:'Mould',about:'Injection mould tooling and moulded parts for custom enclosures.'},
  {id:'testlab',label:'Test and certification labs',short:'Test lab',about:'Safety, EMC and compliance testing.'},
  {id:'logistics',label:'Logistics',short:'Logistics',about:'Couriers and freight for inbound parts and customer delivery.'}];
 
@@ -62,22 +60,6 @@ export const VENDORS=[
  v('pcb','Sierra Circuits','https://www.protoexpress.com','Quick-turn and HDI PCB fabrication.'),
  v('pcb','Advanced Circuits','https://www.4pcb.com','Prototype and production PCB fabrication.'),
  v('pcb','AT&S','https://ats.net','High-end and HDI PCB and substrate production.'),
- v('enclosure','Hammond Manufacturing','https://www.hammfg.com/electronics/small-case/plastic','Stock plastic electronics enclosures.'),
- v('enclosure','Polycase','https://www.polycase.com/','Stock plastic enclosures with machining options.'),
- v('enclosure','OKW','https://www.okwenclosures.com/','Plastic instrument enclosures and customisation.'),
- v('enclosure','Bud Industries','https://www.budind.com','Plastic and metal enclosures.'),
- v('enclosure','Bopla','https://www.bopla.de','Plastic and aluminium enclosures.'),
- v('enclosure','Fibox','https://www.fibox.com','Sealed polycarbonate and ABS enclosures.'),
- v('enclosure','Takachi','https://www.takachi-enclosure.com','Plastic and aluminium enclosures.'),
- v('enclosure','Rittal','https://www.rittal.com','Industrial cabinets and enclosures.'),
- v('mould','Protolabs','https://www.protolabs.com/services/injection-molding/','Quick-turn injection moulding with aluminium and steel tooling.'),
- v('mould','Xometry','https://www.xometry.com','Manufacturing marketplace including injection moulding.'),
- v('mould','Fictiv','https://www.fictiv.com','Injection moulding and machining through a managed network.'),
- v('mould','Hubs','https://www.hubs.com','Injection moulding through the Protolabs Network.'),
- v('mould','RapidDirect','https://www.rapiddirect.com','Injection moulding and rapid tooling.'),
- v('mould','Star Rapid','https://www.starrapid.com','Rapid tooling and low-volume moulding.'),
- v('mould','HLH Prototypes','https://www.hlhprototypes.com','Rapid tooling and injection moulding.'),
- v('mould','PCBWay moulding','https://www.pcbway.com','Injection moulding service alongside PCB fabrication.'),
  v('testlab','UL Solutions','https://www.ul.com','Safety testing and certification.'),
  v('testlab','TÜV SÜD','https://www.tuvsud.com','Testing, inspection and certification.'),
  v('testlab','TÜV Rheinland','https://www.tuv.com','Testing, inspection and certification.'),
@@ -93,15 +75,29 @@ export const VENDORS=[
 
 // Capability fields the user fills per vendor kind; unfilled fields show as not confirmed.
 export const CAPABILITY_FIELDS={
- mould:[['types','Mould types','prototype aluminium, P20 steel, H13 steel'],['materials','Materials','ABS, PC, PC/ABS, PA66'],['tonnage','Press tonnage','50–650 t'],['maxPart','Largest part (mm)','400 × 300 × 150'],['leadWeeks','Tooling lead time (weeks)','4'],['certs','Certifications','ISO 9001']],
  pcb:[['layers','Layers','1–8'],['minTrace','Smallest track / gap','0.1 mm'],['leadDays','Build time (days)','5'],['certs','Certifications','ISO 9001, IPC-6012']],
- enclosure:[['ranges','Ranges','ABS hand-held, IP67 polycarbonate'],['machining','Machining','cut-outs, printing'],['leadDays','Lead time (days)','10']],
  testlab:[['standards','Standards','IEC 62368-1, CISPR 32'],['leadDays','Lead time (days)','20']],
  logistics:[['services','Services','express, economy, freight'],['regions','Regions','India, worldwide']],
  semiconductor:[['families','Families','MOSFETs, LDOs']],passive:[['families','Families','MLCC, chip resistors']],distributor:[['terms','Terms','net 30, MOQ']]};
 
 export const VENDOR_STORE='semicobot-vendors-v1';
-export function loadVendorData(){try{const d=JSON.parse(localStorage.getItem(VENDOR_STORE));return {custom:Array.isArray(d?.custom)?d.custom:[],notes:d?.notes&&typeof d.notes==='object'?d.notes:{},products:Array.isArray(d?.products)?d.products:[]}}catch{return {custom:[],notes:{},products:[]}}}
+// Migration: vendor kinds that no longer exist (older versions also listed housing and tooling makers).
+// A vendor of a removed kind that listed component part numbers keeps them: it moves to Distributors with its
+// notes, so those products stay offers on BOM lines. A vendor of a removed kind with no products is dropped.
+const kindOf=id=>String(id||'').split(':')[0];
+const knownKind=kind=>VENDOR_KINDS.some(k=>k.id===kind);
+const movedId=id=>'distributor:'+String(id).slice(String(id).indexOf(':')+1);
+const titleOf=id=>String(id).slice(String(id).indexOf(':')+1).replace(/^custom-/,'').replace(/-[a-z0-9]{6,}$/,'').replace(/-/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+export function migrateVendorData(d){
+ const custom=Array.isArray(d?.custom)?d.custom.filter(Boolean):[],notes=d?.notes&&typeof d.notes==='object'?d.notes:{},products=Array.isArray(d?.products)?d.products.filter(Boolean):[];
+ const keep=new Set(products.filter(p=>!knownKind(kindOf(p.vendorId))).map(p=>p.vendorId));
+ if(!keep.size)return {custom:custom.filter(x=>knownKind(x.kind)),notes:Object.fromEntries(Object.entries(notes).filter(([id])=>knownKind(kindOf(id)))),products};
+ const moved=[...keep].map(id=>{const own=custom.find(x=>x.id===id);return {...(own||{url:'',about:'',builtIn:false}),id:movedId(id),kind:'distributor',name:own?.name||notes[id]?.name||titleOf(id),builtIn:false}});
+ const outNotes={};for(const [id,v] of Object.entries(notes)){if(knownKind(kindOf(id)))outNotes[id]=v;else if(keep.has(id))outNotes[movedId(id)]=v}
+ return {custom:[...custom.filter(x=>knownKind(x.kind)),...moved],notes:outNotes,
+  products:products.map(p=>keep.has(p.vendorId)?{...p,vendorId:movedId(p.vendorId)}:p)};
+}
+export function loadVendorData(){try{return migrateVendorData(JSON.parse(localStorage.getItem(VENDOR_STORE)))}catch{return {custom:[],notes:{},products:[]}}}
 export function saveVendorData(data){try{localStorage.setItem(VENDOR_STORE,JSON.stringify(data));return true}catch{return false}}
 
 // Every vendor of a kind (built-in first, then the user's own), with the user's notes and capability values merged in.

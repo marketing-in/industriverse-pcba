@@ -43,7 +43,7 @@ export default function Panel({plan,k,t}){
    <div><dt>Speed</dt><dd>{sq.speed} mm/s</dd></div>
    <div><dt>Pressure</dt><dd>{sq.pressure} kg</dd></div>
    <div><dt>Angle</dt><dd>{sq.angle}°</dd></div>
-   <div><dt>Travel</dt><dd>{Math.round(2*tl.E)} mm {tl.dir>0?'↓':'↑'}</dd></div>
+   <div><dt>Travel</dt><dd>{Math.round(2*tl.E)} mm {tl.dir>0?'rear to front':'front to rear'}</dd></div>
    <div><dt>Snap-off</dt><dd>{f1(SLOW/tl.sep)} mm/s</dd></div>
    <div><dt>Align X Y θ</dt><dd>{sg(al.dx)} {sg(al.dy)} mm {sg(al.rot)}°</dd></div>
    <div><dt>Wipe</dt><dd>{tl.wipe?'This board':'Board '+nextWipe}</dd></div>

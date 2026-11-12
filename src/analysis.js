@@ -1,5 +1,5 @@
 // BOM tool → Analysis: what a board needs on the floor, from its own pads (Gerber / KiCad copper).
-// - Solder paste per board and per job, from the stencil apertures semi-cobot's printer model plans
+// - Solder paste per board and per job, from the stencil apertures the printer model plans
 //   (aperture area × stencil thickness × transfer efficiency × paste density), per side, with high
 //   volume (step-up stencil, overprint), less volume (windowpane on exposed pads) and double volume
 //   (pin-in-paste for through-hole pins); thermal paste and conductive adhesive per board.

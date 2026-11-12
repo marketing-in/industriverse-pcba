@@ -47,7 +47,7 @@ test('BOM revisions: letters and what changed',()=>{
  const a={boards:100,total:500,rows:[{mpn:'R1',qty:4,dnp:false,refs:['R1','R2','R3','R4']},{mpn:'U1',qty:1,dnp:false,refs:['U1']}]};
  const b={boards:200,total:900,rows:[{mpn:'R1',qty:3,dnp:false,refs:['R1','R2','R3']},{mpn:'C9',qty:1,dnp:true,refs:['C9']}]};
  const d=compareRevisions(a,b);assert.deepEqual(d.added.map(r=>r.mpn),['C9']);assert.deepEqual(d.removed.map(r=>r.mpn),['U1']);
- assert.deepEqual(d.changed,[{mpn:'R1',what:['qty 4 → 3','−R4']}]);assert.deepEqual(d.boards,[100,200]);
+ assert.deepEqual(d.changed,[{mpn:'R1',what:['qty 4 to 3','−R4']}]);assert.deepEqual(d.boards,[100,200]);
 });
 
 test('shift calendar, masking, setup grouping and moving jobs',()=>{

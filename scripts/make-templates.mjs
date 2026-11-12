@@ -2,7 +2,7 @@
 // blueprint PDF (hand-built, with a real text layer so labels attach to the drawn outlines).
 import {writeFileSync} from 'node:fs';
 
-const csv=`# semi-cobot placement template. One row per component, positions in millimetres from the board's bottom-left corner.
+const csv=`# Industriverse PCBA placement template. One row per component, positions in millimetres from the board's bottom-left corner.
 # Ref = reference designator, Val = value or manufacturer part number, Package = footprint/package name, Rot = rotation in degrees (counter-clockwise), Side = top or bottom.
 Ref,Val,Package,PosX,PosY,Rot,Side
 U1,STM32F407VGT6,LQFP-100_14x14mm,50.000,33.000,0,top
@@ -43,7 +43,7 @@ const objects=[
  '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
  `<< /Length ${Buffer.byteLength(stream,'latin1')} >>\nstream\n${stream}\nendstream`,
  '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
- '<< /Title (semi-cobot picture blueprint template) /Producer (semi-cobot) >>',
+ '<< /Title (Industriverse PCBA picture blueprint template) /Producer (Industriverse PCBA) >>',
 ];
 let pdf='%PDF-1.4\n%\xe2\xe3\xcf\xd3\n';const offsets=[];
 objects.forEach((body,i)=>{offsets.push(Buffer.byteLength(pdf,'latin1'));pdf+=`${i+1} 0 obj\n${body}\nendobj\n`});

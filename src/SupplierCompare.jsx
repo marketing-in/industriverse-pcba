@@ -1,10 +1,11 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {Radar,RefreshCw,ExternalLink,CheckCircle2,CircleDashed,TriangleAlert} from 'lucide-react';
 import {AXES,scoreSellers,summarise,radarPoints} from './supplierScore.js';
+import {useMoney} from './currency.jsx';
 
 const COLORS=['#c0612b','#4a6bc0','#2d8a55','#8a8577','#b8892a'];
 const fmt=n=>Number(n).toLocaleString('en-US');
-const money=(v,c)=>v==null?'—':`${c==='USD'?'$':c==='INR'?'₹':c==='EUR'?'€':c==='GBP'?'£':(c||'')+' '}${v<1?v.toFixed(v<.1?4:3):v.toFixed(2)}`;
+const money=(v,c)=>v==null?'Not available':`${c==='USD'?'$':c==='INR'?'₹':c==='EUR'?'€':c==='GBP'?'£':(c||'')+' '}${v<1?v.toFixed(v<.1?4:3):v.toFixed(2)}`;
 const safeUrl=u=>typeof u==='string'&&/^https:\/\//.test(u)?u:null;
 
 function RadarChart({series,active,setActive}){
@@ -29,22 +30,22 @@ export function SupplierCompare({mpn,compact=false}){
   fetch('/api/compare?mpn='+encodeURIComponent(mpn),{signal:ctl.signal}).then(async r=>{let d;try{d=await r.json()}catch{throw Error('Supplier service offline. Run npm run server.')}if(!r.ok)throw Error(d.error||'Comparison failed.');return d})
    .then(data=>setState({status:'ready',data})).catch(e=>{if(e.name!=='AbortError')setState({status:'error',error:e.message})});
   return()=>ctl.abort()},[mpn,nonce]);
- const scored=useMemo(()=>state.data?scoreSellers(state.data.offers):[],[state.data]);
+ const m$=useMoney();const scored=useMemo(()=>state.data?scoreSellers(state.data.offers):[],[state.data]);
  const top=scored.slice(0,5),sum=summarise(scored);
  if(!mpn)return null;
  return <section className={'compare'+(compact?' compact':'')} aria-label={`Supplier comparison for ${mpn}`}>
-  <div className="compare-head"><div className="title-row"><Radar size={17}/><h3>Suppliers · {mpn}</h3></div><button type="button" className="text-button" onClick={()=>setNonce(n=>n+1)} disabled={state.status==='loading'}><RefreshCw size={13}/>{state.status==='loading'?'Loading…':'Refresh'}</button></div>
+  <div className="compare-head"><div className="title-row"><Radar size={16}/><h3>Suppliers · {mpn}</h3></div><button type="button" className="text-button" onClick={()=>setNonce(n=>n+1)} disabled={state.status==='loading'}><RefreshCw size={16}/>{state.status==='loading'?'Loading…':'Refresh'}</button></div>
   {state.status==='loading'&&<div className="compare-loading" role="status"><span className="pulse"/>Querying suppliers…</div>}
-  {state.status==='error'&&<div className="notice error" role="alert"><TriangleAlert size={18}/><span>{state.error}</span></div>}
+  {state.status==='error'&&<div className="notice error" role="alert"><TriangleAlert size={16}/><span>{state.error}</span></div>}
   {state.status==='ready'&&<>
    <ul className="provider-chips" aria-label="Suppliers queried">{state.data.providers.map(p=><li key={p.id} className={'provider-chip '+p.status} title={p.status==='ok'?`${p.count} offer${p.count===1?'':'s'}`:p.error||('Needs '+p.need)}>{p.status==='ok'?<CheckCircle2 size={12}/>:p.status==='error'?<TriangleAlert size={12}/>:<CircleDashed size={12}/>}{p.name}<b>{p.status==='ok'?p.count:p.status==='error'?'error':'off'}</b></li>)}</ul>
-   {!scored.length?<div className="empty compare-empty">No offers. Check the part number.</div>:<>
-    {sum&&<p className="compare-verdict">Best: <strong>{sum.best.seller}</strong> ({sum.best.overall}/100).{sum.cheapest&&sum.cheapest!==sum.best?<> Cheapest: <strong>{sum.cheapest.seller}</strong>, ${sum.cheapest.priceUsd.toFixed(sum.cheapest.priceUsd<1?3:2)}{sum.cheapest.authorized?'':' (marketplace)'}.</>:null}{sum.deepest?<> Deepest stock: <strong>{sum.deepest.seller}</strong>, {fmt(sum.deepest.stock)}.</>:null}</p>}
+   {!scored.length?<div className="empty compare-empty">No offers for this part number. Check the part number and ask again.</div>:<>
+    {sum&&<p className="compare-verdict">Best: <strong>{sum.best.seller}</strong> ({sum.best.overall}/100).{sum.cheapest&&sum.cheapest!==sum.best?<> Cheapest: <strong>{sum.cheapest.seller}</strong>, {m$.fmt(sum.cheapest.priceUsd,{unit:true})}{sum.cheapest.authorized?'':' (marketplace)'}.</>:null}{sum.deepest?<> Deepest stock: <strong>{sum.deepest.seller}</strong>, {fmt(sum.deepest.stock)}.</>:null}</p>}
     <div className="compare-body">
      <RadarChart series={top} active={active} setActive={setActive}/>
-     <ol className="radar-legend">{top.map((s,i)=><li key={s.seller} className={active===i?'on':''} onPointerEnter={()=>setActive(i)} onPointerLeave={()=>setActive(null)} onFocus={()=>setActive(i)} onBlur={()=>setActive(null)} tabIndex={0}><i style={{background:COLORS[i]}}/><span><strong>{s.seller}</strong><small>{s.authorized?'Authorised':'Marketplace'} · {s.sources.map(x=>x==='serpapi'?'Google Shopping':x).join(', ')}</small></span><b>{s.overall}</b>{!compact&&<span className="legend-axes">{AXES.map(a=><span key={a.key} title={a.hint}>{a.label} {s.scores[a.key]}</span>)}</span>}</li>)}</ol>
+     <ol className="radar-legend">{top.map((s,i)=><li key={s.seller} className={active===i?'on':''} onPointerEnter={()=>setActive(i)} onPointerLeave={()=>setActive(null)} onFocus={()=>setActive(i)} onBlur={()=>setActive(null)} tabIndex={0}><i style={{background:COLORS[i]}}/><span><strong>{s.seller}</strong><small>{s.authorized?'Authorised':'Open market · unverified'} · {s.sources.map(x=>x==='serpapi'?'Google Shopping':x).join(', ')}</small></span><b>{s.overall}</b>{!compact&&<span className="legend-axes">{AXES.map(a=><span key={a.key} title={a.hint}>{a.label} {s.scores[a.key]}</span>)}</span>}</li>)}</ol>
     </div>
-    <div className="table-scroll"><table className="compare-table"><thead><tr><th>Seller</th><th>Unit price</th><th>Stock</th><th>Delivery</th><th>MOQ</th><th>Score</th><th aria-label="Link"/></tr></thead><tbody>{scored.map(s=><tr key={s.seller}><td><strong>{s.seller}</strong><small className="price-note">{s.authorized?'Authorised':'Marketplace'} · {s.sources.map(x=>x==='serpapi'?'Google Shopping':x).join(', ')}</small></td><td className="numeric">{money(s.price,s.currency)}{s.currency&&s.currency!=='USD'&&s.priceUsd!=null&&<small className="price-note">≈ ${s.priceUsd.toFixed(s.priceUsd<1?3:2)}</small>}</td><td className="numeric">{s.stock==null?'Unknown':fmt(s.stock)}</td><td>{s.stock>0?'Ships now':s.leadDays!=null?`${s.leadDays} days`:'Unknown'}</td><td className="numeric">{s.moq==null?'—':fmt(s.moq)}</td><td className="numeric">{s.overall}</td><td>{safeUrl(s.url)&&<a href={safeUrl(s.url)} target="_blank" rel="noreferrer" aria-label={`Open ${s.seller} offer`}><ExternalLink size={14}/></a>}</td></tr>)}</tbody></table></div>
+    <div className="table-scroll"><table className="compare-table"><thead><tr><th>Seller</th><th>Unit price ({m$.currency})</th><th>Stock</th><th>Delivery</th><th>MOQ</th><th>Score</th><th aria-label="Link"/></tr></thead><tbody>{scored.map(s=><tr key={s.seller}><td><strong>{s.seller}</strong><small className="price-note">{s.authorized?'Authorised':'Open market · unverified'} · {s.sources.map(x=>x==='serpapi'?'Google Shopping':x).join(', ')}</small></td><td className="numeric">{s.priceUsd!=null?m$.fmt(s.priceUsd,{unit:true}):s.price!=null?money(s.price,s.currency):<em className="na">Not available</em>}{s.priceUsd!=null&&s.price!=null&&s.currency&&s.currency!==m$.currency&&<small className="price-note">quoted {money(s.price,s.currency)}</small>}</td><td className="numeric">{s.stock==null?'Not available':fmt(s.stock)}</td><td>{s.stock>0?'Ships now':s.leadDays!=null?`${s.leadDays}\u00a0days`:'Not available'}</td><td className="numeric">{s.moq==null?'Not available':fmt(s.moq)}</td><td className="numeric">{s.overall}</td><td>{safeUrl(s.url)&&<a href={safeUrl(s.url)} target="_blank" rel="noreferrer" aria-label={`Open ${s.seller} offer`}><ExternalLink size={16}/></a>}</td></tr>)}</tbody></table></div>
     
    </>}
   </>}

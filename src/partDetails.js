@@ -80,10 +80,10 @@ export function excelRows({rows,detailsOf}){
  return rows.map(r=>{const d=detailsOf(r)||null;return {main_category:r.cls?.category||'',component_type:r.cls?.type||'',subtype:r.cls?.subtype||'',mpn:r.mpn||'',manufacturer:d?.manufacturer||'',
   description:d?.description||'',package:r.package||d?.package||'',mounting_style:r.cls?.mounting||'',value:r.value||'',refs:r.refs.join(', '),quantity:r.refs.length,datasheet:d?.datasheet||'',specifications:specText(d),source:d?.source||''}});
 }
-const styleHeader=ws=>{const h=ws.getRow(1);h.font={bold:true,color:{argb:'FFFCFBF8'}};h.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF2B2A26'}};h.alignment={vertical:'middle'};h.height=20;
+const styleHeader=ws=>{const h=ws.getRow(1);h.font={bold:true,color:{argb:'FFFFFFFF'}};h.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF131B23'}};h.alignment={vertical:'middle'};h.height=20;
  ws.views=[{state:'frozen',ySplit:1}];ws.autoFilter={from:{row:1,column:1},to:{row:1,column:ws.columnCount}}};
 export function buildWorkbook(ExcelJS,{board,rows,detailsOf,nodes=[],counts=new Map()}){
- const wb=new ExcelJS.Workbook();wb.creator='semi-cobot';wb.created=new Date();
+ const wb=new ExcelJS.Workbook();wb.creator='Industriverse PCBA';wb.created=new Date();
  const ws=wb.addWorksheet('Components');ws.columns=EXCEL_COLUMNS.map(([header,key,width])=>({header,key,width}));
  for(const r of excelRows({rows,detailsOf}))ws.addRow(r);
  ws.getColumn('description').alignment={wrapText:true,vertical:'top'};styleHeader(ws);

@@ -1,2 +1,0 @@
-# SEMI-COBOT
-# SEMI-COBOT

@@ -1,7 +1,7 @@
 import React,{useEffect,useId,useRef,useState} from 'react';
 import {ArrowLeft,RefreshCw,ListPlus,Gavel,MessageSquare,ArrowUpRight,Plus,Trash2,TriangleAlert,Replace} from 'lucide-react';
 import {PartImage} from './PartImage.jsx';
-import {allOffers,offerKey,unitAt,orderQty,offerLeadDays,availability,complianceOf,marketLabel,recommend,MARKET_TYPES} from './bom.js';
+import {allOffers,offerKey,unitAt,orderQty,offerLeadDays,availability,complianceOf,marketLabel,recommend,MARKET_TYPES,priceNote} from './bom.js';
 import {SCORES,scoreText,lifecycleOf,offerCertainty,uncertaintyText,uncertaintyBand} from './bomScores.js';
 
 // Component overview: the part, a suggested alternative, three cards (general, availability,
@@ -46,17 +46,17 @@ export default function BomOverview({row,calc,scores,money,alternates=[],busy,re
  const breaks=o=>(o.breaksUsd||[]).slice(0,4).map(b=>`${fmtInt(b.qty)}+ ${money.fmt(b.price,{unit:true})}`).join(' · ');
  const original=o=>o.priceOriginal!=null&&o.currencyOriginal&&o.currencyOriginal!==money.currency?`quoted ${o.currencyOriginal} ${o.priceOriginal}`:'';
  return <div className="bom-overview">
-  <div className="cmp-top"><button className="button small" onClick={onBack}><ArrowLeft size={14}/>BOM</button><span className="muted">Last updated {when(row.fetchedAt)}</span><button className="button small" onClick={onRefresh} disabled={busy||!ready}><RefreshCw size={14} className={busy?'spin':''}/>Refresh prices</button></div>
+  <div className="cmp-top"><button className="button small" onClick={onBack}><ArrowLeft size={16}/>BOM</button><span className="muted">Last updated {when(row.fetchedAt)}</span><button className="button small" onClick={onRefresh} disabled={busy||!ready}><RefreshCw size={16} className={busy?'spin':''}/>Refresh prices</button></div>
   <section className="panel cmp-head" aria-label="Component">
    <PartImage part={{...row,value:row.description}} src={row.image} size={84}/>
    <div className="cmp-title"><h2 ref={headRef} tabIndex={-1}>{row.mpn}</h2><p className="cmp-maker">{row.manufacturer||offers.find(o=>o.manufacturer)?.manufacturer||'Manufacturer not reported'}</p><p className="cmp-desc">{row.description||offers.find(o=>o.description)?.description||'No description reported.'}</p>
     <div className="cmp-scores">{SCORES.map(([k,label])=><span key={k} className="cmp-score"><small>{label}</small><ScoreBadge k={k} s={scores[k]}/></span>)}</div></div>
    <div className="cmp-alt">{suggestion?<><small>Suggested alternative</small><strong>{suggestion}</strong><span className="muted">{offers.some(o=>o.suggestedReplacement===suggestion)?'Supplier suggested replacement':alternates[0]?.from}</span>
-     <div className="cmp-check"><TriangleAlert size={14}/>Check before use: package and footprint, pinout, voltage, current and temperature ratings, and qualification.</div>
-     <button className="button small" onClick={()=>onUseAlternate(suggestion)}><Replace size={14}/>Use in BOM</button></>
-    :<><small>Suggested alternative</small><span className="muted">None recorded</span>{eol&&<div className="cmp-check"><TriangleAlert size={14}/>Lifecycle is {life}: find a replacement and check its compatibility.</div>}</>}</div>
+     <div className="cmp-check"><TriangleAlert size={16}/>Check before use: package and footprint, pinout, voltage, current and temperature ratings, and qualification.</div>
+     <button className="button small" onClick={()=>onUseAlternate(suggestion)}><Replace size={16}/>Use in BOM</button></>
+    :<><small>Suggested alternative</small><span className="muted">None recorded</span>{eol&&<div className="cmp-check"><TriangleAlert size={16}/>Lifecycle is {life}: find a replacement and check its compatibility.</div>}</>}</div>
   </section>
-  <div className="cmp-cards" data-tour="ov-cards">
+  <div className="cmp-cards">
    <Card title="General" rows={[
     ['Condition',sel?.condition||(calc.source==='own'?'Own stock':NA)],
     ['Quantity',fmtInt(calc.need),`${row.qty} per board${calc.useOwn?` · ${fmtInt(calc.useOwn)} from own stock`:''}`],
@@ -76,13 +76,13 @@ export default function BomOverview({row,calc,scores,money,alternates=[],busy,re
     ['Certificate of Conformity',cp.coc||NA,cp.coc?'':'not stated by the seller; ask for one with the order'],
     ['HSN code',cp.hs||NA,cp.hs?'HS 6-digit from the supplier\'s HTS code; confirm the 8-digit HSN':'']]}/>
   </div>
-  <section className="panel cmp-offers" ref={offersRef} id="market-offers" data-tour="ov-offers" aria-label="Offers across all markets" tabIndex={-1}>
-   <div className="panel-heading"><div className="title-row"><h2>Offers Across All Markets</h2><span className="count-label">{offers.length}</span><small className="muted">{offers.length-listings} distributor and entered offer{offers.length-listings===1?'':'s'} · {listings} marketplace listing{listings===1?'':'s'}{row.marketAt?` · searched ${when(row.marketAt)}`:''}</small></div>
-    <div className="offer-head-actions">{marketReady&&<button className="button small" onClick={onRefresh} disabled={busy}><RefreshCw size={14} className={busy?'spin':''}/>{row.marketAt?'Search all markets again':'Search all markets'}</button>}<button className="button small" onClick={()=>setAdding(true)}><Plus size={14}/>Add an offer</button></div></div>
-   {!marketReady&&<div className="studio-note">Marketplace listings need SerpApi (Integrations). Distributor offers are shown.</div>}
+  <section className="panel cmp-offers" ref={offersRef} id="market-offers" aria-label="Offers across all markets" tabIndex={-1}>
+   <div className="panel-heading"><div className="title-row"><h2>Offers across all markets</h2><span className="count-label">{offers.length}</span><small className="muted">{offers.length-listings} distributor and entered offer{offers.length-listings===1?'':'s'} · {listings} marketplace listing{listings===1?'':'s'}{row.marketAt?` · searched ${when(row.marketAt)}`:''}</small></div>
+    <div className="offer-head-actions">{marketReady&&<button className="button small" onClick={onRefresh} disabled={busy}><RefreshCw size={16} className={busy?'spin':''}/>{row.marketAt?'Search all markets again':'Search all markets'}</button>}<button className="button small" onClick={()=>setAdding(true)}><Plus size={16}/>Add an offer</button></div></div>
+   {!marketReady&&<div className="studio-note">Marketplace listings need SerpApi (Price sources). Distributor offers are shown.</div>}
    {row.marketHidden&&Object.values(row.marketHidden).some(n=>n>0)&&<div className="studio-note" role="note">{Object.values(row.marketHidden).reduce((x,y)=>x+y,0)} Google Shopping listing{Object.values(row.marketHidden).reduce((x,y)=>x+y,0)===1?'':'s'} hidden (not the exact product): {[['identity','different part number'],['type','kit, module or "compatible"'],['seller','same seller again']].filter(([k])=>row.marketHidden[k]>0).map(([k,l])=>`${row.marketHidden[k]} ${l}`).join(', ')}. Listings shown are unverified and never bought automatically.</div>}
-   {row.marketStatus==='error'&&<div className="studio-note warn"><TriangleAlert size={15}/> The marketplace search did not answer this time; distributor offers are shown.</div>}
-   {best&&<div className={'best-get'+(best.short?' short':'')} role="status" aria-label="Best to get" data-tour="ov-best">
+   {row.marketStatus==='error'&&<div className="studio-note warn"><TriangleAlert size={16}/> The marketplace search did not answer this time; distributor offers are shown.</div>}
+   {best&&<div className={'best-get'+(best.short?' short':'')} role="status" aria-label="Best to get">
     <span className="best-label">Best to get</span>
     <strong>{best.offer.seller}</strong><span>{money.fmt(best.unit,{unit:true})} each at {fmtInt(qty)}</span><span>{Number.isFinite(best.offer.stock)?`${fmtInt(best.offer.stock)} in stock`:'stock not reported'}</span>
     <UncertaintyBadge c={bestCert}/><span className="muted">{best.reason}{best.short?'':'.'}</span>
@@ -96,17 +96,17 @@ export default function BomOverview({row,calc,scores,money,alternates=[],busy,re
       <td><UncertaintyBadge c={c}/></td>
       <td className="numeric">{Number.isFinite(o.stock)?fmtInt(o.stock):<em className="na">Not reported</em>}</td>
       <td className="numeric">{o.moq?fmtInt(o.moq):<em className="na">{NA}</em>}</td>
-      <td className="numeric">{u?<>{money.fmt(u.unit,{unit:true})}<small className="muted">{money.currency}{original(o)?' · '+original(o):quoted(o)?' · '+quoted(o):''}</small>{(o.breaksUsd||[]).length>1&&<small className="muted breaks">{breaks(o)}</small>}{u.moqShort&&<small className="warn-text">below MOQ</small>}</>:<em className="na">No price</em>}</td>
+      <td className="numeric">{u?<>{money.fmt(u.unit,{unit:true})}{(()=>{const n=priceNote(o,{at:o.fetchedAt||row.fetchedAt});return n&&<small className={'price-note'+(n.warn?' warn-text':'')}>{n.text}</small>})()}<small className="muted">{money.currency}{original(o)?' · '+original(o):quoted(o)?' · '+quoted(o):''}</small>{(o.breaksUsd||[]).length>1&&<small className="muted breaks">{breaks(o)}</small>}{u.moqShort&&<small className="warn-text">below MOQ</small>}</>:<em className="na">No price</em>}</td>
       <td className="numeric">{(()=>{const sh=shipOf(o);return sh?<>{money.fmt(sh.v)}<small className="muted">{sh.note}</small></>:<em className="na">Not quoted</em>})()}</td>
       <td className="numeric">{days(offerLeadDays(o,qty))}</td>
       <td>{o.dateCode||<em className="na">{NA}</em>}</td>
       <td><div className="offer-actions">
-       {u&&<button className="button small" onClick={()=>onAddToCart(o)}><ListPlus size={13}/>Add to list</button>}
-       {(excess||!u)&&<button className="button small" onClick={()=>onBid(o)}><Gavel size={13}/>Bid</button>}
-       {excess&&(link?<a className="button small" href={link} target="_blank" rel="noreferrer noopener"><MessageSquare size={13}/>Chat with Seller</a>:<small className="muted no-contact">No seller contact on this offer</small>)}
+       {u&&<button className="button small" onClick={()=>onAddToCart(o)}><ListPlus size={16}/>Add to list</button>}
+       {(excess||!u)&&<button className="button small" onClick={()=>onBid(o)}><Gavel size={16}/>Bid</button>}
+       {excess&&(link?<a className="button small" href={link} target="_blank" rel="noreferrer noopener"><MessageSquare size={16}/>Chat with seller</a>:<small className="muted no-contact">No seller contact on this offer</small>)}
        {o.url&&<a className={listing?'button small':'text-button'} href={o.url} target="_blank" rel="noreferrer noopener">{listing?'Open listing':'Open'} <ArrowUpRight size={12}/></a>}
-       {o.source==='manual'&&<button className="icon-button" aria-label={`Remove the ${o.seller} offer`} onClick={()=>onRemoveOffer(o.id)}><Trash2 size={14}/></button>}</div></td></tr>})}</tbody></table></div>
-   :<div className="empty"><h3>{row.fetchedAt?'No supplier lists this part':'No offers yet'}</h3><p>{row.fetchedAt?'Add an offer you received, or use an alternative.':ready?'Refresh prices to ask the connected distributors.':'Connect a distributor in Integrations, or add an offer you received.'}</p></div>}
+       {o.source==='manual'&&<button className="icon-button" aria-label={`Remove the ${o.seller} offer`} onClick={()=>onRemoveOffer(o.id)}><Trash2 size={16}/></button>}</div></td></tr>})}</tbody></table></div>
+   :<div className="empty"><p>{row.fetchedAt?'No supplier lists this part. Add an offer you received, or use an alternative.':ready?'No offers yet. Refresh prices to ask the connected distributors.':'No offers yet. Connect a distributor in Price sources, or add an offer you received.'}</p></div>}
    <div className="studio-note">Distributor APIs do not report date codes or shipping charges: set supplier shipping under the BOM, and enter date codes on offers you add. Prices shown in {money.currency}{money.currency==='INR'?` at 1 USD = ₹${money.inrPerUsd.toFixed(2)}`:''}.</div>
   </section>
   {adding&&<OfferForm mpn={row.mpn} money={money} fx={fx} onClose={()=>setAdding(false)} onSave={o=>{onAddOffer(o);setAdding(false)}}/>}

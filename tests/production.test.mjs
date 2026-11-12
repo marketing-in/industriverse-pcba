@@ -173,7 +173,7 @@ test('the whole chain runs material, factory line, assembly, testing and final p
  let state=seedProduction(today);const id='job-4';
  assert.equal(reworkStage(state,id,5,today),state,'SMT is not a gate');
  for(let k=0;k<4;k++)state=completeStage(state,id,today);// SMT, PCBA, THT, wave
- const j=state.jobs.find(x=>x.id===id);assert.deepEqual(j.serials,serialRange(j),'serial numbers from PCBA');assert.equal(j.serials.first,'SC-4-0001');assert.equal(j.serials.last,'SC-4-1500');
+ const j=state.jobs.find(x=>x.id===id);assert.deepEqual(j.serials,serialRange(j),'serial numbers from PCBA');assert.equal(j.serials.first,'SN-4-0001');assert.equal(j.serials.last,'SN-4-1500');
  state=reworkStage(state,id,12,today,'solder bridges');const r=state.jobs.find(x=>x.id===id);
  assert.equal(r.rework.qa,12);assert.equal(stageInfo(r,today).stages[8].active,true,'QA line still open');assert.match(state.log[0].text,/12 boards failed QA line and went to rework \(solder bridges\)/);
  // An order from the BOM tool: estimated from history, linked to its saved list.
@@ -202,4 +202,35 @@ test('factory setup: create lines with their own stations, add, rename, reorder 
  s=p.removeMachine(s,id);assert.equal(s.machines.length,4);
  const est=p.estimateJob(s.machines,p.seedProduction('2026-11-11').jobs,{qty:500,components:90},'2026-11-11');assert.ok(est.ok);assert.equal(est.window.lines,2,'estimates use the lines the user created');
  assert.ok(before>0);
+});
+
+test('a job reads as one lamp state: running, rework at its gate, hold, stopped, queued or done',async()=>{
+ const {jobState,reworkStage,JOB_STATES}=await import('../src/production.js');
+ assert.deepEqual(JOB_STATES,['Running','Hold','Rework','Stopped','Queued','Done']);
+ let state=seedProduction(today);const id='job-4';
+ assert.equal(jobState(state.jobs.find(x=>x.id===id),today),'Running');
+ for(let k=0;k<4;k++)state=completeStage(state,id,today);
+ state=reworkStage(state,id,3,today);const j=state.jobs.find(x=>x.id===id);
+ assert.equal(jobState(j,today),'Rework','boards failed the gate the job is at');
+ assert.equal(jobState(completeStage(state,id,today).jobs.find(x=>x.id===id),today),'Running','past the gate it runs again');
+ assert.equal(jobState({...j,hold:true},today),'Hold');assert.equal(jobState({...j,stopped:true},today),'Stopped');
+ assert.equal(jobState({...j,started:addDays(today,5)},today),'Queued');assert.equal(jobState({...j,finished:today},today),'Done');
+});
+
+test('a job with every stage done but no finish date finishes and frees its line',async()=>{
+ const P=await import('../src/production.js');
+ const base=P.emptyProduction?P.emptyProduction():{jobs:[],machines:[],log:[]};
+ const job={id:'job-x',board:'B',customer:'C',qty:10,started:'2026-11-01',expected:'2026-11-05',progress:1,finished:null,stages:P.STAGES.map(s=>({key:s.key,done:'2026-11-04'}))};
+ const st={...base,machines:[{id:'line-1',name:'SMT line 1',kind:'SMT line',status:'running',job:'job-x',stations:[]}],jobs:[job]};
+ assert.equal(P.jobState(job,'2026-11-12'),'Done');
+ const out=P.finishJob(st,'job-x','2026-11-12');
+ assert.equal(out.jobs[0].finished,'2026-11-12');
+ assert.equal(out.machines[0].job,null);assert.equal(out.machines[0].status,'idle');
+});
+
+test('editing machines marks the floor as set up',async()=>{
+ const P=await import('../src/production.js');
+ const st={jobs:[],machines:[],log:[]};
+ assert.equal(P.addLine(st,{name:'L1'}).floorSet,true);
+ assert.equal(P.addMachine(st,{name:'W',kind:'Wave solder'}).floorSet,true);
 });

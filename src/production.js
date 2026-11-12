@@ -28,7 +28,9 @@ export function nextWorkday(iso,cal=DEFAULT_CALENDAR){let d=iso,guard=0;while(!c
 // The date after n working days from start (start itself is day 1 when it is a working day).
 export function addWorkdays(iso,n,cal=DEFAULT_CALENDAR){if(cal.workdays.length===7)return addDays(iso,n);let d=nextWorkday(iso,cal),left=Math.max(0,Math.round(n)),guard=0;while(left>0&&guard++<5000){d=addDays(d,1);if(cal.workdays.includes(weekday(d)))left--}return d}
 export const calendarText=cal=>`${cal.shifts} shift${cal.shifts===1?'':'s'} of ${cal.hoursPerShift} h, ${cal.workdays.length===7?'every day':cal.workdays.map(d=>WEEKDAYS[d]).join(' ')}`;
-export const formatDate=iso=>{if(!iso)return '—';const [y,m,d]=iso.split('-').map(Number);return new Date(Date.UTC(y,m-1,d)).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'})};
+const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+// Dates read "12 Nov 2026"; an unknown date is written out, never a dash.
+export const formatDate=iso=>{const [y,m,d]=String(iso||'').split('-').map(Number);if(!y||!m||!d)return 'Not available';return `${d} ${MONTHS[m-1]} ${y}`};
 
 // Demo floor: two SMT lines, the through-hole and test stations, and one job in progress. Dates are
 // relative to `today` so the sample always reads as current.
@@ -73,23 +75,23 @@ const machineId=p=>p+'-'+Math.random().toString(36).slice(2,8);
 const nextName=(machines,base)=>{const used=new Set(machines.map(m=>m.name.toLowerCase()));let n=1;while(used.has(`${base} ${n}`.toLowerCase()))n++;return `${base} ${n}`};
 export function addLine(state,{name,stations}={}){
  const m={id:machineId('line'),name:cleanText(name,60)||nextName(state.machines,'SMT line'),kind:'SMT line',status:'idle',job:null,stations:cleanStations(stations)};
- return {...state,machines:[...state.machines,m]};
+ return {...state,floorSet:true,machines:[...state.machines,m]};
 }
 export function addMachine(state,{name,kind}={}){
  if(kind==='SMT line')return addLine(state,{name});
  const k=MACHINE_KINDS.includes(kind)?kind:'Other';
  const m={id:machineId('m'),name:cleanText(name,60)||nextName(state.machines,k==='Other'?'Machine':k),kind:k,status:'idle',job:null};
- return {...state,machines:[...state.machines,m]};
+ return {...state,floorSet:true,machines:[...state.machines,m]};
 }
 // Rename, change a machine's kind (a line stays a line) or a line's stations.
 export function updateMachine(state,id,patch={}){
- return {...state,machines:state.machines.map(m=>{if(m.id!==id)return m;const next={...m};
+ return {...state,floorSet:true,machines:state.machines.map(m=>{if(m.id!==id)return m;const next={...m};
   if('name' in patch)next.name=cleanText(patch.name,60)||m.name;
   if('kind' in patch&&m.kind!=='SMT line'&&patch.kind!=='SMT line'&&MACHINE_KINDS.includes(patch.kind))next.kind=patch.kind;
   if('stations' in patch&&m.kind==='SMT line')next.stations=cleanStations(patch.stations);
   return next})};
 }
-export function removeMachine(state,id){return {...state,machines:state.machines.filter(m=>m.id!==id)}}
+export function removeMachine(state,id){return {...state,floorSet:true,machines:state.machines.filter(m=>m.id!==id)}}
 export function moveMachine(state,id,dir){const i=state.machines.findIndex(m=>m.id===id),j=i+(dir<0?-1:1);if(i<0||j<0||j>=state.machines.length)return state;const ms=[...state.machines];[ms[i],ms[j]]=[ms[j],ms[i]];return {...state,machines:ms}}
 export function clearFloor(state){return {...state,machines:[],floorSet:true}}
 
@@ -210,7 +212,7 @@ export const STAGES=[
  {key:'tht',name:'THT',group:'Factory line',share:.1,about:'Through-hole insertion with polarity checks.'},
  {key:'wave',name:'Wave soldering',group:'Factory line',share:.06,about:'Flux, preheat, wave and cleaning.'},
  {key:'qa',name:'QA line',group:'Factory line',share:.07,gate:true,about:'Visual, AOI and in-circuit or flying-probe test.'},
- {key:'assembly',name:'Assembly',group:'Assembly',share:.1,about:'Board into the enclosure with harness, panel parts and firmware.'},
+ {key:'assembly',name:'Assembly',group:'Assembly',share:.1,about:'Harness, connectors, heatsinks and firmware.'},
  {key:'testing',name:'Testing',group:'Testing',share:.1,gate:true,about:'Functional test, burn-in, safety and calibration as the product needs.'},
  {key:'final',name:'Final QC and pack',group:'Final product',share:.08,gate:true,about:'Outgoing inspection, label, pack and hand-over for dispatch.'}];
 const cumShare=i=>STAGES.slice(0,i+1).reduce((a,s)=>a+s.share,0);
@@ -247,7 +249,11 @@ const logLine=(today,text)=>({at:today,text});
 // its real duration to the history the estimator learns from.
 export function completeStage(state,id,today=todayIso()){
  let job=state.jobs.find(j=>j.id===id);if(!job||job.finished)return state;job=withStages(job);
- const i=job.stages.findIndex(st=>!st.done);if(i<0)return state;
+ const i=job.stages.findIndex(st=>!st.done);
+ if(i<0){// Every stage is done (older saves) but the job never finished: finish it now and free its line.
+  const finished=today<job.started?job.started:today,next={...job,finished,progress:1,shifts:job.shifts||calendarOf(state).shifts};
+  const machines=state.machines.map(m=>m.job===id?{...m,status:'idle',job:null}:m);
+  return replanQueue({...state,machines,jobs:state.jobs.map(j=>j.id===id?next:j)},today)}
  const stages=job.stages.map((st,k)=>k===i?{...st,done:today}:st);let next={...job,stages};
  // Boards get serial numbers when they leave PCBA; assembly, tests and dispatch refer to them.
  if(STAGES[i].key==='pcba'&&!job.serials)next={...next,serials:serialRange(job)};
@@ -262,7 +268,7 @@ export function completeStage(state,id,today=todayIso()){
  log.unshift(logLine(today,`${job.board}: ${STAGES[i].name} done. Finish ${next.expected===before?'stays':'moves to'} ${formatDate(next.expected)}${next.expected===before?'':` (was ${formatDate(before)})`}.`));
  return {...state,jobs:state.jobs.map(j=>j.id===id?next:j),log:log.slice(0,30)};
 }
-export function serialRange(job){const prefix='SC-'+String(job.id).replace(/^job-/,'').toUpperCase();const qty=Math.max(1,Math.round(+job.qty||1));return {prefix,from:1,to:qty,first:`${prefix}-${String(1).padStart(4,'0')}`,last:`${prefix}-${String(qty).padStart(4,'0')}`}}
+export function serialRange(job){const prefix='SN-'+String(job.id).replace(/^job-/,'').toUpperCase();const qty=Math.max(1,Math.round(+job.qty||1));return {prefix,from:1,to:qty,first:`${prefix}-${String(1).padStart(4,'0')}`,last:`${prefix}-${String(qty).padStart(4,'0')}`}}
 // A quality gate found faults: n boards go to rework at the job's current gate and come back to it.
 // The stage stays open; the count is kept on the job and in the log.
 export function reworkStage(state,id,n,today=todayIso(),note=''){
@@ -309,13 +315,13 @@ export function replanQueue(state,today=todayIso()){
  return {...state,machines,jobs,log:log.slice(0,30)};
 }
 // Auto mode: stages complete as their planned time passes, so estimates and the floor stay current
-// without anyone typing. Manual stage completions still re-project the finish from the real pace.
+// without anyone typing. Nothing completes on a job's first day, so a job booked today starts at zero. Manual stage completions still re-project the finish from the real pace.
 export function autoAdvance(state,today=todayIso()){
  let s2={...state,jobs:state.jobs.map(withStages)};
  for(const job of s2.jobs){
   if(job.finished||job.started>today)continue;const span=Math.max(1,daysBetween(job.started,job.planned||job.expected));
   for(let i=0;i<STAGES.length;i++){const cur=s2.jobs.find(j=>j.id===job.id);if(!cur||cur.finished)break;if(cur.stages[i].done)continue;
-   const due=addDays(cur.started,Math.round(cumShare(i)*span));if(due>today)break;s2=completeStage(s2,job.id,due>cur.started?due:cur.started)}
+   const due=addDays(cur.started,Math.max(1,Math.round(cumShare(i)*span)));if(due>today)break;s2=completeStage(s2,job.id,due>cur.started?due:cur.started)}
  }
  return replanQueue(s2,today);
 }
@@ -389,4 +395,15 @@ export function setCalendar(state,next,today=todayIso()){
  const old=calendarOf(state),cal=calendarOf({calendar:next});
  const jobs=state.jobs.map(j=>j.finished&&!j.shifts?{...j,shifts:old.shifts}:j);
  return {...state,jobs,calendar:cal,log:[logLine(today,`Shift calendar: ${calendarText(cal)}.`),...(state.log||[])].slice(0,30)};
+}
+
+// A job's state at glance distance (the lamp on the Jobs page): Done, Stopped, Queued, Hold, Rework or
+// Running. Stopped and Hold come from flags on the job; Rework means boards failed the gate the job
+// is at now and have not passed it yet.
+export const JOB_STATES=['Running','Hold','Rework','Stopped','Queued','Done'];
+export function jobState(job,today=todayIso()){
+ if(!job)return 'Queued';if(job.finished)return 'Done';if(job.stopped)return 'Stopped';
+ const info=stageInfo(job,today);if(info.queued)return 'Queued';if(job.hold)return 'Hold';
+ if(info.current<0)return 'Done';const now=info.stages[info.current];if(now?.gate&&(job.rework||{})[now.key]>0)return 'Rework';
+ return 'Running';
 }

@@ -6,9 +6,9 @@ import {Upload,X,CircuitBoard} from 'lucide-react';
 // handed to the form. When the BOM came from a board in the workspace (boardSource, the board in the 3D
 // view), that board is shown here without an upload: from its Gerber files when the board keeps them,
 // from the faces drawn at import, or drawn from the board model (outline, traces, pads, holes). Only the
-// facts are saved; an uploaded set needs the files again after a reload. demoUrl draws the demo board.
+// facts are saved; an uploaded set needs the files again after a reload.
 // onFiles receives an uploaded set once it reads as Gerber, so the BOM tool can send it on (Board studio, components).
-export default function PcbGerber({info,spec,layers,material,boardSource=null,demoUrl=null,onRead,onClear,onFiles=null}){
+export default function PcbGerber({info,spec,layers,material,boardSource=null,onRead,onClear,onFiles=null}){
  const [result,setResult]=useState(null),[model,setModel]=useState(null),[side,setSide]=useState('top'),[img,setImg]=useState(null),[busy,setBusy]=useState(''),[error,setError]=useState(''),[over,setOver]=useState(false);
  const fileRef=useRef(null),loaded=useRef('');
  const build=async(texts,name)=>{const [{gerberFacts},{buildGerberBoard}]=await Promise.all([import('./gerberQuote.js'),import('./gerber.js')]);
@@ -17,14 +17,12 @@ export default function PcbGerber({info,spec,layers,material,boardSource=null,de
  const read=async list=>{if(!list.length)return;loaded.current='upload';setError('');setBusy('Reading Gerber files…');
   try{const {readGerberFiles}=await import('./gerberQuote.js');const name=list.length===1?list[0].name:`${list.length} files`;onRead(await build(await readGerberFiles(list),name));onFiles?.(list)}
   catch(e){setError(e.message||'These files could not be read as a Gerber set.')}finally{setBusy('')}};
- // The board's own Gerber set (or the demo board), loaded once per source. A board's facts are handed
+ // The board's own Gerber set, loaded once per source. A board's facts are handed
  // to the form only when they are not already there, so an entered price is kept across reloads.
  const fromBoard=boardSource&&(!info||info.board===boardSource.id)?boardSource:null;
- const key=demoUrl?'demo:'+demoUrl:fromBoard?'board:'+fromBoard.id:'';
+ const key=fromBoard?'board:'+fromBoard.id:'';
  useEffect(()=>{if(!key||loaded.current===key)return;loaded.current=key;let live=true;const stale=()=>!live||loaded.current!==key;setError('');setBusy('Reading Gerber files…');
   (async()=>{try{
-   if(demoUrl){const {readGerberFiles}=await import('./gerberQuote.js');const r=await fetch(demoUrl);if(!r.ok)throw Error('The demo board could not be loaded.');
-    const file=new File([await r.arrayBuffer()],demoUrl.split('/').pop());if(!stale())await build(await readGerberFiles([file]),file.name);return}
    if(fromBoard.gerberSource){const {gerberFromBoard}=await import('./gerberQuote.js');const {result:r,facts}=await gerberFromBoard(fromBoard);if(stale())return;
     setImg(null);setModel(null);setResult(r);setSide('top');if(info?.board!==fromBoard.id)onRead(facts);return}
    const {boardFacts}=await import('./bareBoard.js');if(stale())return;setImg(null);setResult(null);setModel(fromBoard);setSide('top');if(info?.board!==fromBoard.id)onRead(boardFacts(fromBoard,fromBoard.parts))}
@@ -44,12 +42,12 @@ export default function PcbGerber({info,spec,layers,material,boardSource=null,de
  const clear=()=>{setResult(null);setModel(null);setImg(null);setError('');loaded.current='';onClear(info?.board||null)};
  const drop=e=>{e.preventDefault();setOver(false);read([...e.dataTransfer.files])};
  const aspect=info?`${info.widthMm} / ${info.heightMm}`:undefined;
- return <div className={'pcb-gerber'+(over?' over':'')} data-tour="pcb-gerber" onDragOver={e=>{e.preventDefault();setOver(true)}} onDragLeave={()=>setOver(false)} onDrop={drop}>
+ return <div className={'pcb-gerber'+(over?' over':'')} onDragOver={e=>{e.preventDefault();setOver(true)}} onDragLeave={()=>setOver(false)} onDrop={drop}>
   <div className="pcb-gerber-head"><h3 className="bom-sub">{info?.board?'Bare board':'Gerber files'}</h3>
-   <span className="pcb-gerber-actions"><button type="button" className="button small" onClick={()=>fileRef.current?.click()} disabled={!!busy}><Upload size={14}/>{info?'Replace':'Upload Gerber'}</button>
-    {info&&<button type="button" className="icon-button" aria-label="Remove the Gerber files" onClick={clear}><X size={15}/></button>}</span></div>
+   <span className="pcb-gerber-actions"><button type="button" className="button small" onClick={()=>fileRef.current?.click()} disabled={!!busy}><Upload size={16}/>{info?'Replace':'Upload Gerber'}</button>
+    {info&&<button type="button" className="icon-button" aria-label="Remove the Gerber files" onClick={clear}><X size={16}/></button>}</span></div>
   <input ref={fileRef} type="file" hidden multiple aria-label="Upload Gerber files" accept=".zip,.gbr,.ger,.gtl,.gbl,.gts,.gbs,.gto,.gbo,.gtp,.gbp,.gko,.gml,.gm1,.drl,.xln,.txt,.pos,.csv,.tsv,.xlsx,.html,.htm,.kicad_pcb" onChange={e=>{read([...e.target.files]);e.target.value=''}}/>
-  {info?.board&&<p className="pcb-gerber-board small-copy"><CircuitBoard size={14}/> From the board this BOM was loaded from: <strong>{info.boardName}</strong>{info.drawn==='model'?', drawn from its outline, tracks, pads and holes':''}. No need to upload a Gerber.</p>}
+  {info?.board&&<p className="pcb-gerber-board small-copy"><CircuitBoard size={16}/> From the board this BOM was loaded from: <strong>{info.boardName}</strong>{info.drawn==='model'?', drawn from its outline, tracks, pads and holes':''}. No need to upload a Gerber.</p>}
   {busy&&<p className="muted small-copy" role="status">{busy}</p>}
   {error&&<p className="warn-text small-copy" role="alert">{error}</p>}
   {!info&&!busy&&<p className="muted small-copy">Upload the Gerber ZIP, or the layer and drill files, to take the board size and copper layers from the design and see the bare board. You can also drop them here. A BOM loaded from a board imported as Gerber uses that board's files.</p>}

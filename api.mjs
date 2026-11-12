@@ -30,8 +30,7 @@ export function normalizeDigikey(data,mpn){return (data.Products||[]).filter(p=>
 // --- Claude vision ------------------------------------------------------------------------------
 // POST /api/vision sends a board picture to the Claude Messages API and returns normalised bounding
 // boxes for the board and its components. The component families mirror TYPE_LABELS in
-// src/blueprint.js; they are repeated here because scripts/package.mjs inlines this file into the
-// Worker, so it cannot import from src/.
+// src/blueprint.js; they are repeated here so the server code does not import from src/.
 const VISION_TYPES=['chip','transistor','diode','led','capacitor','resistor','inductor','connector','crystal','switch','fuse','module','other'];
 const VISION_MEDIA=['image/jpeg','image/png','image/webp'];
 const VISION_BODY_LIMIT=6*1024*1024;
@@ -458,7 +457,7 @@ async function handleMachineInfo(url,env,fetcher,store){
 }
 
 // --- Admin sign-in ----------------------------------------------------------------------------
-// Accounts are created on the intro page (the first one is the admin). Passwords: PBKDF2-SHA256 (210,000 rounds, random salt).
+// Accounts are created on the sign-in screen (the first one is the admin). Passwords: PBKDF2-SHA256 (210,000 rounds, random salt).
 // Sessions: an HttpOnly, SameSite=Strict cookie holding {email, expiry} signed with HMAC-SHA256.
 // Web Crypto only, so the same code runs in Node and in the Worker. auth: {load(), save(state)}
 // kept by the host (the Node server writes data/auth.json; hosted.mjs keeps it in Redis); without it sign-in is off.

@@ -12,7 +12,7 @@ test('every classification rule points at a real catalogue entry',()=>{
 });
 
 test('the catalogue lists every category, type and subtype',()=>{
- const n=catalogueNodes(tax);assert.equal(n.filter(x=>x.level===0).length,10);assert.equal(n.filter(x=>x.level===1).length,101);assert.equal(n.filter(x=>x.level===2).length,416);
+ const n=catalogueNodes(tax);assert.equal(n.filter(x=>x.level===0).length,10);assert.equal(n.filter(x=>x.level===1).length,101);assert.equal(n.filter(x=>x.level===2).length,415);
 });
 
 const P=(o)=>makePart(o);

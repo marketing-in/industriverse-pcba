@@ -8,11 +8,11 @@ export class StorageError extends Error{constructor(message,code=''){super(messa
 const json=(data,status=200)=>new Response(JSON.stringify(data),{status,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}});
 const MESSAGES={
  none:'The database is not connected. Set SUPABASE_URL and SUPABASE_SECRET_KEY in the Vercel project settings, then redeploy.',
- publishable:'SUPABASE_SECRET_KEY holds the publishable key. Use the secret key (Supabase → Project Settings → API Keys).',
+ publishable:'SUPABASE_SECRET_KEY holds the publishable key. Use the secret key from Project Settings, API Keys in Supabase.',
  'missing-table':'The database table is missing. Run supabase/schema.sql in the Supabase SQL editor.',
- 'bad-key':'Supabase refused SUPABASE_SECRET_KEY. Copy the secret key again from Project Settings → API Keys.',
+ 'bad-key':'Supabase refused SUPABASE_SECRET_KEY. Copy the secret key again from Project Settings, API Keys.',
  'no-rights':'The server key has no rights on the table. Run supabase/schema.sql again in the Supabase SQL editor.',
- paused:'The Supabase project is paused. Restore it from the Supabase dashboard.',
+ paused:'The Supabase project is paused. Restore it in Supabase, then try again.',
  down:'The database is not answering. Try again in a minute.'};
 
 // Which database to use. Supabase: SUPABASE_URL plus the secret key (SUPABASE_SECRET_KEY, or the legacy

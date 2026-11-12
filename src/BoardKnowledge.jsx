@@ -1,6 +1,8 @@
 import React,{useMemo,useState} from 'react';
 import {BookOpen,CircuitBoard,CheckCircle2,CircleDashed,Plus,Trash2,Search,ChevronDown,ListChecks} from 'lucide-react';
 
+// What each support rule is for, as people say it (acronyms stay acronyms).
+const ROLE_WORD={mcu:'MCU',ldo:'LDO',buck:'Buck converter',opamp:'Op-amp',ic:'IC',usbc:'USB-C',usb:'USB',mosfet:'MOSFET',led:'LED',jack:'DC jack'};
 const TYPE_WORD={chip:'IC',transistor:'Transistor',diode:'Diode',led:'LED',capacitor:'Capacitor',resistor:'Resistor',inductor:'Inductor',connector:'Connector',crystal:'Crystal',switch:'Switch',fuse:'Fuse',module:'Module',other:'Part'};
 const pct=n=>Math.round(n*100)+'%';
 
@@ -29,17 +31,17 @@ export function BoardKnowledge({analysis,parts,suggested=0,onAdd,onRemove,onBrow
   <div className="panel-heading"><div className="title-row"><BookOpen size={18}/><h2>Board knowledge</h2>{best&&<span className="count-label">{pct(best.confidence)} match</span>}</div><button type="button" className="text-button" onClick={onBrowse}>All board types <ChevronDown size={13} style={{transform:'rotate(-90deg)'}}/></button></div>
   <div className="bk-grid">
    <div className="bk-type">{best?<>
-     <span className="eyebrow">This looks like</span><h3>{best.type.name}</h3><p>{best.type.description}</p>
+     <h3>This looks like {best.type.name}</h3><p>{best.type.description}</p>
      {best.evidence.length>0&&<div className="alt-chips" aria-label="Evidence">{best.evidence.map(e=><span key={e} className="alt-chip plain">{e}</span>)}</div>}
      {matches.length>1&&<small className="muted">Also possible: {matches.slice(1).map(m=>`${m.type.name} (${pct(m.confidence)})`).join(', ')}</small>}
      <BoardTypeCard type={best.type} present={t=>(counts[t]||0)>0}/>
-    </>:<><span className="eyebrow">Board type</span><h3>Not recognised yet</h3><p>Identify the parts first.</p></>}
+    </>:<><h3>Board type not recognised yet</h3><p>Identify the parts first.</p></>}
    </div>
-   <div className="bk-plan"><div className="bk-plan-head"><span className="eyebrow">Supporting parts</span><h3>{plan.missing?`${plan.missing} part${plan.missing===1?'':'s'} missing`:'Nothing missing'}{plan.planned?<small className="bk-planned"> · {plan.planned} planned</small>:null}</h3>
+   <div className="bk-plan"><div className="bk-plan-head"><h3>{plan.missing?`${plan.missing} supporting part${plan.missing===1?'':'s'} missing`:'No supporting parts missing'}{plan.planned?<small className="bk-planned"> · {plan.planned} planned</small>:null}</h3>
      <div className="bk-actions">{plan.missing>0&&<button type="button" className="button primary small" onClick={onAdd}><Plus size={14}/>Add {plan.missing} missing part{plan.missing===1?'':'s'}</button>}{suggested>0&&<button type="button" className="button small" onClick={onRemove}><Trash2 size={14}/>Remove {suggested} suggested</button>}</div></div>
     {byParent.size?<div className="table-scroll"><table className="bk-table"><thead><tr><th>For</th><th>Part</th><th>Value</th><th>Example</th><th>Have</th><th>Missing</th></tr></thead><tbody>
-     {[...byParent].map(([parent,items])=>items.map((it,i)=><tr key={parent+i} className={it.missing?'missing':''}>{i===0&&<td rowSpan={items.length}><span className="ref-chip">{parent}</span><small className="price-note">{it.role.toUpperCase()}</small></td>}
-      <td>{TYPE_WORD[it.type]||it.type}<small className="price-note">{it.purpose}</small></td><td>{it.value}<small className="price-note">{it.package}</small></td><td><code>{it.example}</code></td><td className="numeric">{it.present}/{it.qty}{it.planned?<small className="price-note">+{it.planned} planned</small>:null}</td><td className="numeric">{it.optional?'optional':it.missing||'—'}</td></tr>))}
+     {[...byParent].map(([parent,items])=>items.map((it,i)=><tr key={parent+i} className={it.missing?'missing':''}>{i===0&&<td rowSpan={items.length}><span className="ref-chip">{parent}</span><small className="price-note">{ROLE_WORD[it.role]||it.role}</small></td>}
+      <td>{TYPE_WORD[it.type]||it.type}<small className="price-note">{it.purpose}</small></td><td>{it.value}<small className="price-note">{it.package}</small></td><td><code>{it.example}</code></td><td className="numeric">{it.present}/{it.qty}{it.planned?<small className="price-note">+{it.planned} planned</small>:null}</td><td className="numeric">{it.optional?'optional':it.missing||'None'}</td></tr>))}
     </tbody></table></div>:<p className="muted">No support rules apply.</p>}
    </div>
   </div>

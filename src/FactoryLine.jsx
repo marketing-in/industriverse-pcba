@@ -29,17 +29,17 @@ const label=(text,THREEns,sub='')=>{const c=document.createElement('canvas');c.w
 
 // The clicked machine's own details (Factory setup): what it is, when it was built, its footprint.
 function MachineCard({line,short,d,present}){
- if(!line)return <div className="fl-card muted">Add your lines and their machines in Production → Set up the factory to see each machine's maker, model, year and size here.</div>;
+ if(!line)return <div className="fl-card muted">Add your lines and their machines in Engineering, Machines to see each machine's maker, model, year and size here.</div>;
  if(!present)return <div className="fl-card muted">{line.name} has no {short} station; this one is simulated.</div>;
- if(!d)return <div className="fl-card muted">No details yet for the {short} on {line.name}. Add maker, model, year and size in Production → Set up the factory → Details.</div>;
+ if(!d)return <div className="fl-card muted">No details yet for the {short} on {line.name}. Add maker, model, year and size under Details in Engineering, Machines.</div>;
  const rows=[['Year built',d.year],['Model introduced',d.introduced],['Footprint (L × W × H)',footprint(d)],['Weight',d.weight&&`${d.weight.toLocaleString('en-IN')} kg`],['Power',d.power],['Speed / capacity',d.speed],['Serial number',d.serial],['Notes',d.notes]].filter(([,v])=>v);
- return <div className="fl-card" role="region" aria-label="Machine details"><span className="eyebrow">{line.name} · {short}</span><strong>{[d.maker,d.model].filter(Boolean).join(' ')||short}</strong>
+ return <div className="fl-card" role="region" aria-label="Machine details"><strong>{[d.maker,d.model].filter(Boolean).join(' ')||short}</strong><small className="muted">{line.name} · {short}</small>
   <dl>{rows.map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
   {d.source?.urls?.length>0&&<small className="muted">From the web: {d.source.urls.map((u,i)=><a key={u} href={u} target="_blank" rel="noreferrer">source {i+1}</a>).reduce((a,b)=>[a,' · ',b])}</small>}</div>;
 }
 
 export default function FactoryLine({board,parts,lines=[]}){
- // Your own SMT lines (Production → Set up the factory): the chosen line's machine details show on the
+ // Your own SMT lines (Engineering, Machines): the chosen line's machine details show on the
  // station labels, the station buttons and the machine's card. Stations it does not have are marked.
  const [lineId,setLineId]=useState(()=>lines[0]?.id||'');const myLine=lines.find(l=>l.id===lineId)||lines[0]||null;
  const machineAt=short=>myLine?detailsOf(myLine,short):null,hasStation=short=>!myLine||stationsOf(myLine).includes(short);
@@ -61,11 +61,14 @@ export default function FactoryLine({board,parts,lines=[]}){
   renderer.setPixelRatio(Math.min(2,devicePixelRatio||1));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;renderer.outputColorSpace=THREE.SRGBColorSpace;el.appendChild(renderer.domElement);
   const camera=new THREE.PerspectiveCamera(40,1,.05,400),controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.maxPolarAngle=Math.PI*.49;controls.minDistance=1;controls.maxDistance=30;
   const owned=[];const keep=x=>{owned.push(x);return x};
+  // The viewport ground is the theme's --stage, read from the document element; the fallback is the
+  // old grey for a page without the token.
+  const stageColor=fallback=>{const c=new THREE.Color(fallback);try{const v=getComputedStyle(document.documentElement).getPropertyValue('--stage').trim();if(v)c.setStyle(v)}catch{/* keep the fallback */}return c};
   const mat=(color,metalness=.15,roughness=.6,extra={})=>keep(new THREE.MeshStandardMaterial({color,metalness,roughness,...extra}));
   const lights=(sc,withFloor=true)=>{sc.add(new THREE.HemisphereLight(0xffffff,0x8a8578,1.1));const sun=new THREE.DirectionalLight(0xffffff,1.5);sun.position.set(6,14,9);sun.castShadow=true;sun.shadow.mapSize.set(2048,2048);Object.assign(sun.shadow.camera,{left:-22,right:22,top:12,bottom:-12,near:1,far:60});sun.shadow.bias=-.0004;sc.add(sun);
    if(!withFloor)return;const floor=new THREE.Mesh(keep(new THREE.PlaneGeometry(400,400)),keep(new THREE.ShadowMaterial({opacity:.1})));floor.rotation.x=-Math.PI/2;floor.receiveShadow=true;sc.add(floor)};
   // --- overview scene
-  const scene=new THREE.Scene();lights(scene,false);scene.background=new THREE.Color(0xd5d6d1);scene.fog=new THREE.Fog(0xd5d6d1,34,80);
+  const scene=new THREE.Scene();lights(scene,false);scene.background=stageColor(0xd5d6d1);scene.fog=new THREE.Fog(scene.background.getHex(),34,80);
   const lineLen=STATIONS.reduce((s,st)=>s+WIDTH[st.id],0)+GAP*(STATIONS.length-1),x0=-lineLen/2,X={};let cx=x0;
   for(const st of STATIONS){X[st.id]={left:cx,right:cx+WIDTH[st.id],mid:cx+WIDTH[st.id]/2};cx+=WIDTH[st.id]+GAP}
   // Machines, link conveyors and the unloader (factoryModels.js); every machine part is clickable.
@@ -107,7 +110,7 @@ export default function FactoryLine({board,parts,lines=[]}){
   // --- inner scene (built on focus)
   let innerScene=null,innerObj=null,innerKit=null,saved=null;
   const openInner=async(id,k)=>{const load=INNER['./factory/'+id+'.js'];if(!load)return;const mod=await load();if(!api.current)return;closeInner();
-   innerKit=createKit(THREE,plan);innerObj=mod.build(innerKit,{THREE,plan,result:plan.results[k],k});innerScene=new THREE.Scene();lights(innerScene);innerScene.background=new THREE.Color(0xcfd0cb);innerScene.add(innerObj.group);
+   innerKit=createKit(THREE,plan);innerObj=mod.build(innerKit,{THREE,plan,result:plan.results[k],k});innerScene=new THREE.Scene();lights(innerScene);innerScene.background=stageColor(0xcfd0cb);innerScene.add(innerObj.group);
    saved=saved||{pos:camera.position.clone(),target:controls.target.clone()};
    const bb=new THREE.Box3().setFromObject(innerObj.group),c=bb.getCenter(new THREE.Vector3()),r=bb.getBoundingSphere(new THREE.Sphere()).radius;
    if(innerObj.view){camera.position.set(...innerObj.view.position);controls.target.set(...innerObj.view.target)}else{controls.target.copy(c);camera.position.copy(c).addScaledVector(new THREE.Vector3(.25,.7,.8).normalize(),r/Math.sin(camera.fov*Math.PI/360)*.9)}
@@ -138,8 +141,12 @@ export default function FactoryLine({board,parts,lines=[]}){
     if(!innerObj){const p=camera.position;p.set(Math.min(inside.x1,Math.max(inside.x0,p.x)),Math.min(inside.y1,Math.max(inside.y0,p.y)),Math.min(inside.z1,Math.max(inside.z0,p.z)))}
     renderer.render(innerScene||scene,camera)}};
   raf=requestAnimationFrame(tick);
+  // Light and dark: re-read --stage when the theme attribute changes or the system scheme flips.
+  const restage=()=>{const c=stageColor(scene.background.getHex());scene.background.copy(c);scene.fog.color.copy(c);if(innerScene)innerScene.background=stageColor(innerScene.background.getHex())};
+  const themeWatch=new MutationObserver(restage);themeWatch.observe(document.documentElement,{attributes:true,attributeFilter:['data-theme','data-line','class','style']});
+  const scheme=window.matchMedia?.('(prefers-color-scheme: dark)');scheme?.addEventListener?.('change',restage);
   api.current={openInner,backToLine};
-  return()=>{cancelAnimationFrame(raf);ro.disconnect();io.disconnect();closeInner();controls.dispose();renderer.domElement.removeEventListener('pointerdown',onDown);renderer.domElement.removeEventListener('pointerup',onUp);renderer.domElement.removeEventListener('pointermove',onMove);
+  return()=>{cancelAnimationFrame(raf);ro.disconnect();io.disconnect();themeWatch.disconnect();scheme?.removeEventListener?.('change',restage);closeInner();controls.dispose();renderer.domElement.removeEventListener('pointerdown',onDown);renderer.domElement.removeEventListener('pointerup',onUp);renderer.domElement.removeEventListener('pointermove',onMove);
    scene.traverse(o=>{o.geometry?.dispose?.()});owned.forEach(x=>x.dispose?.());models.dispose();renderer.dispose();renderer.domElement.remove();api.current=null};
  },[plan,board,total,labelKey]);// eslint-disable-line react-hooks/exhaustive-deps
 

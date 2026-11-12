@@ -2,7 +2,7 @@ import React,{useState} from 'react';
 import {Factory,CheckCircle2,PackageCheck,Truck,ArrowRight} from 'lucide-react';
 import {boardFlow,flowSummary,moveBoards,activeJobs,completedJobs,formatDate,todayIso} from './production.js';
 
-// Inventory → Production: finished goods. Every job's boards in production, completed, ready for
+// Production, Dispatch: finished goods. Every job's boards in production, completed, ready for
 // dispatch and dispatched, with the step that moves boards on and the dispatch log.
 const STEPS=[['built','Completed','inProduction'],['ready','Ready for dispatch','completed'],['dispatch','Dispatched','ready']];
 const fmt=n=>Math.round(n).toLocaleString('en-IN');
@@ -32,10 +32,10 @@ export default function BoardFlow({state,setState,notify=()=>{},onOpenProduction
  return <div className="board-flow">
   <div className="stats-grid flow-stats">{tiles.map(([k,v,Icon,c])=><div className={'stat '+c} key={k}><div className="stat-top"><span>{k}</span><Icon size={18}/></div><div className="stat-value">{fmt(v)}<small className="stat-unit"> boards</small></div></div>)}</div>
   <section className="panel" aria-label="Boards by job">
-   <div className="panel-heading"><div className="title-row"><h2>Boards by job</h2><span className="count-label">{jobs.length}</span></div>{onOpenProduction&&<button className="text-button" onClick={onOpenProduction}>Production floor <ArrowRight size={15}/></button>}</div>
+   <div className="panel-heading"><div className="title-row"><h2>Boards by job</h2><span className="count-label">{jobs.length}</span></div>{onOpenProduction&&<button className="text-button" onClick={onOpenProduction}>Jobs <ArrowRight size={15}/></button>}</div>
    {jobs.length?<div className="table-scroll"><table className="flow-table"><thead><tr><th>Job</th><th className="numeric">Boards</th><th className="numeric">In production</th><th className="numeric">Completed</th><th className="numeric">Ready</th><th className="numeric">Dispatched</th><th>Move boards</th></tr></thead>
     <tbody>{jobs.map(j=><JobRow key={j.id} job={j} today={today} setState={setState} notify={notify}/>)}</tbody></table></div>
-   :<div className="empty"><Factory/><h3>No boards in production</h3><p>Book a job on the Production page; its boards appear here.</p>{onOpenProduction&&<button className="button" onClick={onOpenProduction}>Open Production</button>}</div>}
+   :<div className="empty"><p>No boards in production yet. A job's boards appear here once it is booked on the Jobs page.</p>{onOpenProduction&&<button className="button" onClick={onOpenProduction}>Open jobs</button>}</div>}
   </section>
   {log.length>0&&<section className="panel" aria-label="Dispatch log"><div className="panel-heading"><div className="title-row"><Truck size={17}/><h2>Dispatch log</h2></div></div>
    <ol className="log-list">{log.map((d,i)=><li key={i}><time>{formatDate(d.date)}</time><span>{fmt(d.qty)} × {d.board} to {d.customer}{d.note?` · ${d.note}`:''}</span></li>)}</ol></section>}

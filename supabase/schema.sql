@@ -1,4 +1,5 @@
--- semi-cobot hosted storage. Run once in the Supabase SQL editor (Dashboard → SQL Editor → New query).
+-- Industriverse PCBA hosted storage. Table and function names keep their original semicobot_ prefix so
+-- existing projects keep working; do not rename them. Run once in the Supabase SQL editor (Dashboard → SQL Editor → New query).
 -- One small key-value table: the account document, wrong-password counters (expire after 15 minutes)
 -- and the part-info cache (90 days). Only the server's secret key can use it: row level security is on
 -- with no policies, and the public (publishable/anon) roles get no table or function rights.

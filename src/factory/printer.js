@@ -90,7 +90,7 @@ export function build(kit,ctx){
  let shown=null,filled=-1;
  const steps=[{t:T.in,label:'Board in on conveyor'},{t:T.clamp,label:'Edge clamp, support pins up'},{t:T.cam,label:'Camera to fiducial 1'},{t:T.go2,label:'Fiducial 2, compute offset'},
   {t:T.align,label:'Align table X Y θ'},{t:T.lift,label:`Lift board to stencil (${GAP} mm)`},{t:T.down,label:`Squeegee down, ${pr.squeegee.pressure} kg`},
-  {t:T.stroke,label:`Print stroke ${tl.dir>0?'rear → front':'front → rear'}, ${pr.squeegee.speed} mm/s`},{t:T.sep,label:`Snap-off ${r2(SLOW/tl.sep)} mm/s`},
+  {t:T.stroke,label:`Print stroke ${tl.dir>0?'rear to front':'front to rear'}, ${pr.squeegee.speed} mm/s`},{t:T.sep,label:`Snap-off ${r2(SLOW/tl.sep)} mm/s`},
   {t:T.lower,label:'Lower table, unclamp'},{t:T.out,label:'Board out to SPI'}];
  if(tl.wipe)steps.push({t:T.wipe,label:'Under-stencil wipe'});
 

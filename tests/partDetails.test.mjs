@@ -47,7 +47,7 @@ test('the directory exports to Excel with catalogue fields and reads details bac
  assert.deepEqual(wb.worksheets.map(w=>w.name),['Components','Catalogue','Board']);const ws=wb.getWorksheet('Components');
  assert.deepEqual(ws.getRow(1).values.slice(1),EXCEL_COLUMNS.map(c=>c[0]));assert.ok(ws.autoFilter,'filters on every column');assert.equal(ws.views[0].ySplit,1,'header frozen');
  assert.deepEqual(ws.getRow(2).values.slice(1,5),['Discrete semiconductors','MOSFET','N-channel','BSS138']);assert.equal(ws.getRow(2).getCell(10).value,'Q1, Q2');assert.equal(ws.getRow(2).getCell(13).value,'Package: SOT-23; 50V');
- const cat=wb.getWorksheet('Catalogue');assert.equal(cat.rowCount,417,'header and every subtype');assert.ok(cat.getSheetValues().some(r=>r&&r[3]==='N-channel'&&r[4]===1));
+ const cat=wb.getWorksheet('Catalogue');assert.equal(cat.rowCount,416,'header and every subtype (Hardware has no Enclosure subtype)');assert.ok(!cat.getSheetValues().some(r=>r&&r[3]==='Enclosure'),'no Enclosure subtype');assert.ok(cat.getSheetValues().some(r=>r&&r[3]==='N-channel'&&r[4]===1));
  const buf=await wb.xlsx.writeBuffer();const back=await readWorkbook(ExcelJS,buf);
  assert.deepEqual(Object.keys(back),['BSS138'],'part-master rows are not re-imported');assert.equal(back.BSS138.manufacturer,'onsemi');assert.equal(back.BSS138.datasheet,'https://www.onsemi.com/bss138.pdf');
  assert.deepEqual(back.BSS138.specs,[{name:'Package',value:'SOT-23'},{name:'',value:'50V'}]);

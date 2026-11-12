@@ -20,6 +20,8 @@ const LAYER_NAMES={'parts-top':'Components · top','silk-top':'Silkscreen · top
 // Survive scene rebuilds: the camera per board and view mode, and rendered Gerber layer images per board.
 const viewMemory=new Map(),gerberLayerCache=new Map();
 const CAMERAS={overview:[10,13,12],top:[0,19,.6],side:[15,4.5,7],assembly:[8,15,16]};
+// What each camera is called on screen ('overview' is only the key).
+const VIEW_NAMES={overview:'Angled',top:'Top',side:'Side',assembly:'Assembly'};
 const THICK=.18;
 // Builds every mesh of a board into `group`. Returns the pickable component meshes.
 function buildBoard(group,board,parts,s,models={}){
@@ -69,7 +71,7 @@ function buildBoard(group,board,parts,s,models={}){
  }
  for(let i=decorStart;i<group.children.length;i++)group.children[i].userData.layer??='parts-top';
  function label(text,x,z,size,y=THICK/2+.012){const canvas=document.createElement('canvas');canvas.width=256;canvas.height=64;const c=canvas.getContext('2d');c.font='bold 30px monospace';c.fillStyle='#dcefe3';c.textAlign='center';c.fillText(String(text).slice(0,14),128,40);const t=new THREE.CanvasTexture(canvas);const plane=new THREE.Mesh(new THREE.PlaneGeometry(size*3,size*.75),new THREE.MeshBasicMaterial({map:t,transparent:true,depthWrite:false}));plane.rotation.x=-Math.PI/2;plane.position.set(x,y,z);plane.userData.layer='silk-top';group.add(plane)}
- if(board.decor){label('SEMI-COBOT',0,-3.03,.65);label('CTRL-01 / REV 2.4',0,3.04,.5)}
+ if(board.decor){label('INDUSTRIVERSE',0,-3.03,.65);label('CTRL-01 / REV 2.4',0,3.04,.5)}
  // Pads: real copper from KiCad, or synthetic leads for centroid-only boards. Merged per side.
  const padGeos={top:[],bottom:[]},holeGeos=[];let padCount=0;
  for(const p of parts){
@@ -144,7 +146,12 @@ function buildBoard(group,board,parts,s,models={}){
  return clickable;
 }
 
-export default function Board({board,parts,onSelect,onHover,onPick,onFocus,selected,compact=false,mode='3D',setMode}){
+// With no board the view says what belongs here and offers to add files (onAddFiles, when given).
+export default function Board(props){
+ if(!props.board)return <div className={'board-view board-empty'+(props.compact?' compact':'')}><div className="board-placeholder"><p>No board loaded. Add a Gerber ZIP, a .kicad_pcb, a .pos file or a .glb.</p>{props.onAddFiles&&<button type="button" className="button" onClick={props.onAddFiles}><Upload size={16} aria-hidden="true"/>Add files</button>}</div></div>;
+ return <BoardView {...props}/>;
+}
+function BoardView({board,parts,onSelect,onHover,onPick,onFocus,selected,compact=false,mode='3D',setMode}){
  const host=useRef(),wrap=useRef(),tip=useRef(),sceneRef=useRef(),cb=useRef({});cb.current={onSelect,onHover,onPick,onFocus};
  const partsRef=useRef(parts);partsRef.current=parts;
  // Component models attached to part numbers (modelStore.js); attaching or turning one rebuilds the scene.
@@ -242,7 +249,7 @@ export default function Board({board,parts,onSelect,onHover,onPick,onFocus,selec
    desired=c.clone().addScaledVector(new THREE.Vector3(.2,.62,.72).normalize(),dist);controls.target.copy(c);
    stepSmt(performance.now())};
   const stepSmt=now=>{const a=grip.asm,t=Math.min(a.rig.tEnd,a.rig.tStart+(now-a.t0)/1000*a.rate),s=a.rig.apply(t);a.placed=s.placed;
-   if(s.placed!==a.shown&&s.placed<a.line.placeOrder.length){a.shown=s.placed;const p=meshByRef.get(a.line.placeOrder[s.placed]).userData.part;setGripStatus(`Placing ${s.placed+1}/${a.queue.length} · ${p.ref} → X ${fmtMm(p.x)} Y ${fmtMm(p.y)} mm · ${Math.round(((p.rot%360)+360)%360)}°`)}
+   if(s.placed!==a.shown&&s.placed<a.line.placeOrder.length){a.shown=s.placed;const p=meshByRef.get(a.line.placeOrder[s.placed]).userData.part;setGripStatus(`Placing ${s.placed+1}/${a.queue.length} · ${p.ref} to X ${fmtMm(p.x)} Y ${fmtMm(p.y)} mm · ${Math.round(((p.rot%360)+360)%360)}°`)}
    if(t<a.rig.tEnd)return;
    const n=a.line.placeOrder.length,e=a.rig.error;endRig(a.rig);grip.asm=null;setAssembling(false);grip.pose={...HOME};applyPose(grip.pose);
    setGripStatus(`Assembled ${n} part${n===1?'':'s'} from ${a.label} · worst placement error ${e.mm.toFixed(3)} mm, ${e.deg.toFixed(2)}°`+(a.note?' · '+a.note:''))};
@@ -381,14 +388,14 @@ export default function Board({board,parts,onSelect,onHover,onPick,onFocus,selec
      {showLabel&&<text y={(p.rot%180===0?p.d/2:p.rot%180===90?p.w/2:Math.hypot(p.w,p.d)/2)+svg.fs*.95} textAnchor="middle" fontSize={svg.fs} fill="#eff6e7">{p.ref}</text>}
     </g>})}
    {svg.pads.tht&&<path d={svg.pads.tht} fill="#c9b578" stroke="#1c2a27" strokeWidth={svg.sw*2} pointerEvents="none"/>}
-   {board.decor&&<text x="0" y="-30" textAnchor="middle" fontSize="2.2" fill="#d5e3d9">SEMI-COBOT · CTRL-01</text>}
+   {board.decor&&<text x="0" y="-30" textAnchor="middle" fontSize="2.2" fill="#d5e3d9">INDUSTRIVERSE · CTRL-01</text>}
   </svg>:<div ref={host} className="canvas-host" aria-label="Interactive 3D PCB. Drag to rotate; move over a component to identify it; click to inspect."/>}
   <div ref={tip} className={'board-tip '+(hover?'visible':'')} role="status" aria-live="polite">{hover&&<><PartSummary part={hover} tooltip/></>}</div>
-  {modelStatus&&mode!=='2D'&&!failed&&<div className="model-status" role="status">{modelStatus}</div>}<div className="view-badge"><span className="live-dot"/> {mode==='2D'?'TOP LAYER':exploded?'LAYERS SEPARATED':flipped?'BOTTOM VIEW':view.toUpperCase()}</div>
+  {modelStatus&&mode!=='2D'&&!failed&&<div className="model-status" role="status">{modelStatus}</div>}<div className="view-badge"><span className="live-dot"/> {mode==='2D'?'Top layer':exploded?'Layers separated':flipped?'Bottom view':VIEW_NAMES[view]||view}</div>
   {!compact&&mode!=='2D'&&!failed&&<div className="board-tools"><button title={full?'Exit full screen (Esc)':'Full screen'} aria-label={full?'Exit full screen':'Full screen'} aria-pressed={full} onClick={toggleFull}>{full?<Minimize2 size={16}/>:<Maximize2 size={16}/>}</button><button title="Zoom in" aria-label="Zoom in" onClick={()=>sceneRef.current?.camera.position.multiplyScalar(.85)}><ZoomIn size={17}/></button><button title="Zoom out" aria-label="Zoom out" onClick={()=>sceneRef.current?.camera.position.multiplyScalar(1.15)}><ZoomOut size={17}/></button><button title="Reset view" aria-label="Reset view" onClick={reset}><RotateCcw size={17}/></button>{!board.glb&&<><button title={gripOn?'Turn the gripper off':'Pick parts with the cobot gripper'} aria-label="Gripper" aria-pressed={gripOn} className={gripOn?'active':''} onClick={()=>setGripOn(!gripOn)}><Hand size={17}/></button><button title={exploded?'Put the board back together':'Separate the layers: components, silkscreen, mask, copper circuit and core'} aria-label={exploded?'Join the layers':'Separate the layers'} aria-pressed={exploded} className={exploded?'active':''} onClick={()=>setExploded(v=>!v)}><Layers3 size={17}/></button></>}{gripOn&&!flipped&&!exploded&&<>{assembling?<button title="Stop assembly" aria-label="Stop assembly" onClick={()=>sceneRef.current?.stopAssembly()}><Square size={15}/></button>:<button title="Assemble the board: place every top-side part from the tape feeders" aria-label="Assemble board" onClick={()=>sceneRef.current?.startAssembly(programRows(parts,board).map(r=>r.ref),'the placement data')}><Play size={16}/></button>}<button title="Export the gripper program (CSV)" aria-label="Export gripper program" onClick={exportProgram}><Download size={16}/></button><button title="Import a gripper program or pick-and-place file and run it" aria-label="Import gripper program" disabled={assembling} onClick={()=>programInput.current?.click()}><Upload size={16}/></button><input ref={programInput} type="file" accept=".csv,.txt,.tsv,.pos" hidden aria-label="Gripper program file" onChange={e=>{importProgram(e.target.files?.[0]);e.target.value=''}}/></>}{<button title={flipped?'Show top side':'Show bottom side'} aria-label={flipped?'Show top side':'Show bottom side'} aria-pressed={flipped} className={flipped?'active':''} onClick={()=>setFlipped(!flipped)}><FlipVertical2 size={17}/></button>}</div>}
   {exploded&&mode!=='2D'&&!compact&&<div className="layer-legend" role="group" aria-label="Board layers"><strong>Board layers</strong>{layerStatus&&<small role="status">{layerStatus}</small>}
    {layerList.map(key=>{const off=hiddenLayers.includes(key);return <button key={key} type="button" aria-pressed={!off} onClick={()=>setHiddenLayers(h=>off?h.filter(x=>x!==key):[...h,key])}>{off?<EyeOff size={13}/>:<Eye size={13}/>}{LAYER_NAMES[key]||key}</button>})}
    <span className="layer-quick"><button type="button" onClick={()=>setHiddenLayers(layerList.filter(k=>!/^copper|^core/.test(k)))}>Circuit only</button><button type="button" onClick={()=>setHiddenLayers(layerList.filter(k=>!/^parts/.test(k)&&k!=='core'))}>Components only</button><button type="button" onClick={()=>setHiddenLayers([])}>All layers</button></span></div>}
-  <div className="board-bottom"><span className={gripOn&&gripStatus&&mode!=='2D'?'grip-status':undefined} role={gripOn&&mode!=='2D'?'status':undefined}>{gripOn&&gripStatus&&mode!=='2D'&&!compact?gripStatus:compact?`${parts.length} components${board.layers?` · ${board.layers} layers`:''}`:mode==='2D'?'Hover to identify · Click to inspect':'Drag to orbit · Scroll to zoom · Click to inspect'}</span>{!compact&&mode!=='2D'&&!failed&&<div className="segmented camera-row" aria-label="Camera view">{['overview','top','side'].map(v=><button key={v} className={view===v&&!flipped?'active':''} aria-pressed={view===v} onClick={()=>goTo(v)}>{v[0].toUpperCase()+v.slice(1)}</button>)}</div>}{setMode&&<div className="segmented"><button className={mode==='2D'?'active':''} onClick={()=>setMode('2D')}><Layers size={13}/>2D</button><button className={mode==='3D'?'active':''} onClick={()=>setMode('3D')}><Box size={13}/>3D</button></div>}</div>
+  <div className="board-bottom"><span className={gripOn&&gripStatus&&mode!=='2D'?'grip-status':undefined} role={gripOn&&mode!=='2D'?'status':undefined}>{gripOn&&gripStatus&&mode!=='2D'&&!compact?gripStatus:compact?`${parts.length} components${board.layers?` · ${board.layers} layers`:''}`:mode==='2D'?'Hover to identify · Click to inspect':'Drag to orbit · Scroll to zoom · Click to inspect'}</span>{!compact&&mode!=='2D'&&!failed&&<div className="segmented camera-row" aria-label="Camera view">{['overview','top','side'].map(v=><button key={v} className={view===v&&!flipped?'active':''} aria-pressed={view===v} onClick={()=>goTo(v)}>{VIEW_NAMES[v]}</button>)}</div>}{setMode&&<div className="segmented"><button className={mode==='2D'?'active':''} onClick={()=>setMode('2D')}><Layers size={13}/>2D</button><button className={mode==='3D'?'active':''} onClick={()=>setMode('3D')}><Box size={13}/>3D</button></div>}</div>
  </div>
 }

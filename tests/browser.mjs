@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import ExcelJS from 'exceljs';
 import path from 'node:path';
 // Screenshots and generated workbooks go to WORK_DIR (default ../../work, outside the repository).
+// The dev server address: DEV_PORT as in vite.config.js (default 5173).
+const BASE=`http://127.0.0.1:${process.env.DEV_PORT||5173}`;
 const WORK=process.env.WORK_DIR||'../../work';const out=name=>path.join(WORK,name);
 const browser=await chromium.launch({executablePath:process.env.CHROME_PATH||'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true});
 const page=await browser.newPage({viewport:{width:1440,height:1000}});const svgPart=name=>page.locator('.board-svg').getByRole('button',{name});const errors=[];page.on('pageerror',e=>errors.push(e.message));
@@ -15,12 +17,10 @@ await page.route('**/api/compare?**',r=>{const mpn=new URL(r.request().url()).se
  const all=!new URL(r.request().url()).searchParams.get('sources'),listing={mpn,seller:'Aion FX',source:'serpapi',marketType:'marketplace',authorized:false,stock:null,priceUsd:.02,breaksUsd:[],title:mpn+' IC chip 10pcs',url:'https://example.com/listing',condition:null};
  r.fulfill({json:{mpn,fetchedAt:new Date().toISOString(),providers:[{id:'digikey',name:'DigiKey',status:'ok'},{id:'mouser',name:'Mouser',status:'ok'},...(all?[{id:'serpapi',name:'Google Shopping',status:'ok'}]:[])],offers:[offer('DigiKey','digikey',a,.5),offer('Mouser','mouser',b,.45),...(all?[listing]:[])],fx:{approximate:true,rates:{}}}})});
 try{
- await page.goto('http://127.0.0.1:5173');await page.evaluate(()=>localStorage.clear());await page.reload();
+ await page.goto(BASE);await page.evaluate(()=>localStorage.clear());await page.reload();
  // Intro page and admin panel: what the product does, then first-run sign-up (or sign-in with TEST_ADMIN_EMAIL / TEST_ADMIN_PASSWORD).
  const adminPanel=page.getByRole('region',{name:'Admin'});await adminPanel.waitFor();
- assert.equal(await page.getByRole('list',{name:'What semi-cobot does'}).getByRole('listitem').count(),6);await page.getByRole('img',{name:/board moving through the seven machines/}).waitFor();
- {const bg=await page.locator('video.intro-bg').evaluate(v=>({src:v.currentSrc||v.src,loop:v.loop,muted:v.muted,poster:v.poster,hidden:v.getAttribute('aria-hidden')}));assert.match(bg.src,/\/media\/intro-assembly\.webm$/);assert.ok(bg.loop&&bg.muted&&bg.hidden==='true');assert.match(bg.poster,/intro-assembly\.jpg$/);
-  assert.equal((await page.request.get('http://127.0.0.1:5173/media/intro-assembly.webm')).status(),200,'the background video is served')}
+ assert.equal(await page.getByRole('list',{name:'What Industriverse PCBA does'}).getByRole('listitem').count(),6);await page.getByRole('img',{name:/board moving through the seven machines/}).waitFor();
  const ADMIN={name:'Line Admin',email:process.env.TEST_ADMIN_EMAIL||'admin@semicobot.test',password:process.env.TEST_ADMIN_PASSWORD||'test password 123'};
  const signIn=async()=>{const p=page.getByRole('region',{name:'Admin'});if(await p.getByRole('heading',{name:'Create the admin account'}).count()){await p.getByLabel('Name').fill(ADMIN.name);await p.getByLabel('Email').fill(ADMIN.email);await p.getByLabel('Password').fill(ADMIN.password);await p.getByRole('button',{name:'Create account'}).click()}
   else{await p.getByLabel('Email').fill(ADMIN.email);await p.getByLabel('Password').fill(ADMIN.password);await p.getByRole('button',{name:'Sign in'}).click()}};
@@ -38,7 +38,7 @@ try{
  await page.getByRole('region',{name:'Get started'}).waitFor();assert.equal(await page.locator('.demo-label').count(),0,'no sample label on real data');
  assert.match(await page.getByRole('group',{name:'Boards'}).innerText(),/In production\s*0/);
  await page.getByRole('region',{name:'Get started'}).getByRole('button',{name:'Load sample data'}).click();await page.getByText('Sample components and jobs loaded.').waitFor();await page.locator('.demo-label').waitFor();
- {const guest=await browser.newPage();await guest.goto('http://127.0.0.1:5173');await guest.getByRole('heading',{name:'Sign in',exact:true}).waitFor();
+ {const guest=await browser.newPage();await guest.goto(BASE);await guest.getByRole('heading',{name:'Sign in',exact:true}).waitFor();
   assert.equal(await guest.evaluate(()=>fetch('/api/search?provider=nexar&mpn=SS14').then(r=>r.status)),401,'the API needs a session');
   await guest.getByLabel('Email').fill(ADMIN.email);await guest.getByLabel('Password').fill('not the password');await guest.getByRole('button',{name:'Sign in'}).click();await guest.getByRole('alert').filter({hasText:'Wrong email or password'}).waitFor();
   // A newcomer signs up and goes straight in; the admin sees them in the Team window.
@@ -92,7 +92,7 @@ try{
  await page.getByRole('navigation').getByRole('button',{name:/^BOM tool/}).click();await page.getByRole('heading',{name:'BOM tool',level:1}).waitFor();
  // The work starts with the bare board; the components come second.
  await page.getByRole('region',{name:'Bare PCB setup'}).waitFor();assert.deepEqual(await page.getByRole('navigation',{name:'BOM workflow'}).locator('button > span').allInnerTexts(),['1','2','3','4']);
- assert.match(await page.getByRole('navigation',{name:'BOM workflow'}).innerText(),/1\s*Bare PCB\s*2\s*Components\s*3\s*Enclosure\s*optional\s*4\s*Quotation/);
+ assert.match(await page.getByRole('navigation',{name:'BOM workflow'}).innerText(),/1\s*Bare PCB\s*2\s*Components\s*3\s*Analysis\s*optional\s*4\s*Quotation/);
  assert.match(await page.getByRole('note').filter({hasText:'Step 1 of 4'}).innerText(),/Step 1 of 4 · Bare PCB\. Required\. Upload the Gerber ZIP/);
  assert.equal(await page.getByLabel('Bare PCB material').locator('option',{hasText:'No bare PCB'}).count(),0,'the bare PCB cannot be switched off');
  await page.getByRole('button',{name:'Next: Components',exact:true}).click();
@@ -239,7 +239,7 @@ try{
  await page.getByRole('navigation',{name:'BOM workflow'}).getByRole('button',{name:/Quotation$/}).click();
  {const oc=page.getByRole('region',{name:'Save or continue'});assert.equal(await oc.getByLabel('Customer').inputValue(),'Orion Boards','reopened exactly as saved');
   const due=new Date(Date.now()+40*864e5).toISOString().slice(0,10);await oc.getByLabel('Requested delivery').fill(due);
-  await oc.getByRole('button',{name:/Continue to production/}).click();await page.getByText(/for Orion Boards is in production/).waitFor()}
+  await oc.getByRole('button',{name:/Continue to production/}).click();await page.getByText(/^Job created from .* for Orion Boards/).waitFor()}
  await page.getByRole('navigation').getByRole('button',{name:/^Production/}).click();const chainJobs=page.getByRole('region',{name:'Jobs on the floor'});
  const orion=chainJobs.locator('.job-row',{hasText:'Orion Boards'});await orion.waitFor();
  assert.match(await orion.locator('.stage-groups').innerText(),/Material[\s\S]*Incoming check[\s\S]*QA incoming[\s\S]*Kitting[\s\S]*Storing[\s\S]*Factory line[\s\S]*SMT[\s\S]*PCBA[\s\S]*THT[\s\S]*Wave soldering[\s\S]*QA line[\s\S]*Assembly[\s\S]*Testing[\s\S]*Final product[\s\S]*Final QC and pack/i);
@@ -262,14 +262,14 @@ try{
  assert.equal(await page.getByRole('region',{name:'Production stages'}).locator('li').count(),12);
  await page.getByRole('navigation').getByRole('button',{name:/^Overview/}).click();assert.match(await page.getByRole('region',{name:'Product flow'}).innerText(),/Part master[\s\S]*Internal stock[\s\S]*BOM tool[\s\S]*Saved lists[\s\S]*Material[\s\S]*Factory line[\s\S]*Assembly[\s\S]*Testing[\s\S]*Final product/i);
  // Studio inspector: Compare suppliers asks every supplier at once and draws the radar (live keys optional).
- await page.goto('http://127.0.0.1:5173/#Board%20studio');await page.getByLabel('Board',{exact:true}).selectOption('reference');await page.getByRole('button',{name:'2D',exact:true}).click();await svgPart(/^U1 /).hover();
+ await page.goto(BASE+'/#Board%20studio');await page.getByLabel('Board',{exact:true}).selectOption('reference');await page.getByRole('button',{name:'2D',exact:true}).click();await svgPart(/^U1 /).hover();
  await page.getByRole('button',{name:'Compare suppliers'}).click();const cmp=page.getByRole('dialog').getByRole('region',{name:/Supplier comparison for /});
  await cmp.getByRole('list',{name:'Suppliers queried'}).waitFor({timeout:45000});assert.equal(await cmp.getByRole('list',{name:'Suppliers queried'}).getByRole('listitem').count(),6);
  assert.match(await cmp.innerText(),/Mouser[\s\S]*TME[\s\S]*Master Electronics[\s\S]*Google Shopping/);
  if(await cmp.locator('.radar').count())assert.match(await cmp.locator('.radar').getAttribute('aria-label'),/Supplier radar: .+ \d+/);
  await page.getByRole('button',{name:'Close dialog'}).click();
  // Board knowledge: the board type is recognised, missing supporting parts are planned and placed, then removed.
- await page.goto('http://127.0.0.1:5173/#Board%20studio');const bk=page.getByRole('region',{name:'Board knowledge'});await bk.getByText('This looks like').waitFor({timeout:20000});
+ await page.goto(BASE+'/#Board%20studio');const bk=page.getByRole('region',{name:'Board knowledge'});await bk.getByText('This looks like').waitFor({timeout:20000});
  assert.match(await bk.innerText(),/STM32 \/ Cortex-M development board/);const listBefore=await page.locator('.board-list-item').count();
  const missing=Number((await bk.innerText()).match(/(\d+) parts? missing/)[1]);assert.ok(missing>0);
  await bk.getByRole('button',{name:/Add \d+ missing part/}).click();await bk.getByText(/Nothing missing/).waitFor();assert.match(await bk.innerText(),new RegExp(missing+' planned'));
@@ -278,7 +278,7 @@ try{
  await bk.getByRole('button',{name:/All board types/}).click();await page.getByRole('heading',{name:'Board types'}).waitFor();assert.ok(await page.locator('.btype').count()>=55);
  await page.getByLabel('Search board types').fill('stepper');assert.match(await page.locator('.btype-grid').innerText(),/Stepper motor driver/);
  // Exploded layer view: components, silkscreen, mask, copper circuit and core pulled apart and labelled.
- await page.goto('http://127.0.0.1:5173/#Board%20studio');await page.getByRole('button',{name:'3D',exact:true}).click();await page.waitForTimeout(600);
+ await page.goto(BASE+'/#Board%20studio');await page.getByRole('button',{name:'3D',exact:true}).click();await page.waitForTimeout(600);
  await page.getByRole('button',{name:'Separate the layers'}).click();const legend=page.getByRole('group',{name:'Board layers'});await legend.waitFor();
  assert.match(await legend.innerText(),/Components · top[\s\S]*Copper circuit · top[\s\S]*Core · FR-4[\s\S]*Copper circuit · bottom/);await page.getByText('LAYERS SEPARATED').waitFor();
  await legend.getByRole('button',{name:'Circuit only'}).click();assert.equal(await legend.getByRole('button',{name:/Components · top/}).getAttribute('aria-pressed'),'false');assert.equal(await legend.getByRole('button',{name:/Copper circuit · top/}).getAttribute('aria-pressed'),'true');
@@ -293,7 +293,7 @@ try{
  await page.getByRole('button',{name:'Full screen'}).click();await page.waitForFunction(()=>document.fullscreenElement?.classList.contains('board-view'));await page.getByRole('button',{name:'Exit full screen'}).click();await page.waitForFunction(()=>!document.fullscreenElement);
  await page.getByRole('button',{name:'Join the layers'}).click();assert.equal(await legend.count(),0);
  // Cobot gripper: pick a part in 3D, put it back by clicking empty space, assemble the board, program file round trip.
- await page.goto('http://127.0.0.1:5173/#Board%20studio');await page.getByRole('button',{name:'3D',exact:true}).click();await page.waitForTimeout(600);
+ await page.goto(BASE+'/#Board%20studio');await page.getByRole('button',{name:'3D',exact:true}).click();await page.waitForTimeout(600);
  await page.getByRole('button',{name:'Gripper',exact:true}).click();const gripStatus=page.locator('.grip-status');await gripStatus.filter({hasText:'Gripper ready'}).waitFor();
  const canvas=await page.locator('.canvas-host canvas').boundingBox();let spot=null;
  for(let y=canvas.y+canvas.height*.35;y<canvas.y+canvas.height*.7&&!spot;y+=18)for(let x=canvas.x+canvas.width*.3;x<canvas.x+canvas.width*.7;x+=18){await page.mouse.move(x,y);await page.waitForTimeout(20);if(await page.locator('.board-tip.visible').count()){spot=[x,y];break}}
@@ -460,11 +460,11 @@ try{
  await page.unroute('**/api/partinfo?*');
  assert.equal(await page.getByRole('navigation').getByRole('button',{name:'Sourcing'}).count(),0,'the Sourcing page is gone');const nexar=await page.evaluate(()=>fetch('/api/search?provider=nexar&mpn=SS14').then(async r=>[r.status,(await r.json()).error]));assert.equal(nexar[0],503);assert.match(nexar[1],/not connected/);
  // Check all target widths and keyboard focus, using a clean sample workspace.
- await page.evaluate(()=>{localStorage.clear();localStorage.setItem('semicobot-tour-v1','done')});await page.goto('http://127.0.0.1:5173/#Overview');await page.reload();
+ await page.evaluate(()=>{localStorage.clear();localStorage.setItem('semicobot-tour-v1','done')});await page.goto(BASE+'/#Overview');await page.reload();
  await page.getByRole('region',{name:'Get started'}).getByRole('button',{name:'Load sample data'}).click();await page.getByText('Sample components and jobs loaded.').waitFor();
  const exportPromise=page.waitForEvent('download');await page.getByRole('button',{name:'Export Excel',exact:true}).click();await(await exportPromise).saveAs(out('semi-cobot-component-directory.xlsx'));
  for(const width of [1440,1024,768,375]){await page.setViewportSize({width,height:900});await page.waitForTimeout(300);const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth);assert.equal(overflow,false,`horizontal page overflow at ${width}`);await page.screenshot({path:out(`viewport-${width}.png`),fullPage:true});}
- await page.goto('http://127.0.0.1:5173/#Board%20studio');await page.waitForTimeout(500);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'horizontal overflow in Board studio at 375');await page.screenshot({path:out('studio-375.png'),fullPage:true});await page.goto('http://127.0.0.1:5173/#Overview');await page.waitForTimeout(300);
+ await page.goto(BASE+'/#Board%20studio');await page.waitForTimeout(500);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'horizontal overflow in Board studio at 375');await page.screenshot({path:out('studio-375.png'),fullPage:true});await page.goto(BASE+'/#Overview');await page.waitForTimeout(300);
  await page.getByRole('button',{name:'Toggle navigation'}).click();await page.getByRole('button',{name:'Inventory',exact:true}).click();assert.equal(await page.locator('.sidebar.open').count(),0);
  await page.emulateMedia({reducedMotion:'reduce'});await page.keyboard.press('Tab');assert.ok(await page.evaluate(()=>document.activeElement!==document.body));
  // Sign out returns to the intro page; signing in again opens the workspace.

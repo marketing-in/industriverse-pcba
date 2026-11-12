@@ -1,6 +1,7 @@
 import React,{useEffect,useMemo,useState} from 'react';
 import {BarChart3,RefreshCw,Radar,TriangleAlert,ChevronDown,ExternalLink,ShoppingCart} from 'lucide-react';
 import {scoreSellers} from './supplierScore.js';
+import {useMoney} from './currency.jsx';
 
 // Stacked market chart for the board on screen: one row per part number, one bar segment per
 // supplier sized by the stock that supplier reports, plus the best authorised price and how many
@@ -9,7 +10,6 @@ import {scoreSellers} from './supplierScore.js';
 // switched on or off, because each part number costs one SerpApi search (cached for six hours).
 const MAIN=['DigiKey','Mouser','TME','Master Electronics'],MAX_COLS=7;
 const fmt=n=>Number(n).toLocaleString('en-US');
-const money=v=>'$'+v.toFixed(v<1?3:2);
 const cache=new Map();          // MPN -> compare result, for this browser session
 const inflight=new Map();       // MPN -> pending request, shared by every render that asks for it
 const CONCURRENCY=3;
@@ -28,6 +28,7 @@ const naturalCmp=(a,b)=>String(a).localeCompare(String(b),undefined,{numeric:tru
 const refRange=refs=>{if(refs.length<=3)return refs.join(', ');return `${refs[0]}–${refs[refs.length-1]}`};
 
 export function MarketChart({parts=[],onFocus,onCompare}){
+ const m$=useMoney(),money=v=>m$.fmt(v,{unit:true});
  const rows=useMemo(()=>{const m=new Map();for(const p of parts){const k=keyOf(p);if(!k)continue;const r=m.get(k.toUpperCase())||{mpn:k,refs:[],part:p};r.refs.push(p.ref);m.set(k.toUpperCase(),r)}
   return [...m.values()].map(r=>({...r,refs:r.refs.sort(naturalCmp)})).sort((a,b)=>naturalCmp(a.refs[0],b.refs[0]))},[parts]);
  const unnamed=parts.length-rows.reduce((n,r)=>n+r.refs.length,0);
@@ -57,32 +58,32 @@ export function MarketChart({parts=[],onFocus,onCompare}){
  const offline=providers.filter(p=>p.status!=='ok');
  if(!parts.length)return null;
  return <section className="panel market-panel" aria-label="Market for this board">
-  <div className="panel-heading"><div className="title-row"><BarChart3 size={18}/><h2>Market for this board</h2><span className="count-label">{rows.length} part number{rows.length===1?'':'s'}</span></div>
-   <div className="market-actions"><button type="button" className={'text-button'+(shopping?' on':'')} aria-pressed={shopping} onClick={()=>setShopping(v=>!v)} title="Each part number uses one SerpApi search, cached for six hours"><ShoppingCart size={13}/>Google Shopping {shopping?'on':'off'}</button><button type="button" className="text-button" onClick={()=>setClosed(c=>c.size?new Set():new Set(rows.map(r=>r.mpn)))}><ChevronDown size={13}/>{closed.size?'Open all':'Close all'}</button><button type="button" className="text-button" onClick={()=>setNonce(n=>n+1)} disabled={busy}><RefreshCw size={13}/>{busy?`Checking ${loaded.length}/${rows.length}…`:'Refresh'}</button></div></div>
+  <div className="panel-heading"><div className="title-row"><BarChart3 size={16}/><h2>Market for this board</h2><span className="count-label">{rows.length} part number{rows.length===1?'':'s'}</span></div>
+   <div className="market-actions"><button type="button" className={'text-button'+(shopping?' on':'')} aria-pressed={shopping} onClick={()=>setShopping(v=>!v)} title="Each part number uses one SerpApi search, cached for six hours"><ShoppingCart size={16}/>Google Shopping {shopping?'on':'off'}</button><button type="button" className="text-button" onClick={()=>setClosed(c=>c.size?new Set():new Set(rows.map(r=>r.mpn)))}><ChevronDown size={16}/>{closed.size?'Open all':'Close all'}</button><button type="button" className="text-button" onClick={()=>setNonce(n=>n+1)} disabled={busy}><RefreshCw size={16}/>{busy?`Checking ${loaded.length}/${rows.length}…`:'Refresh'}</button></div></div>
   <div className="market-summary">
    <div><small>Boards the market can supply</small><strong>{buildable==null?'…':fmt(buildable)}</strong>{bottleneck&&<span>Limited by {bottleneck.mpn}</span>}</div>
-   <div><small>Parts cost per board</small><strong>{bomCost==null?'…':'$'+bomCost.toFixed(2)}</strong><span>Best authorised price</span></div>
+   <div><small>Parts cost per board</small><strong>{bomCost==null?'…':m$.fmt(bomCost)}</strong><span>Best authorised price</span></div>
    <div><small>Out of stock</small><strong>{loaded.length===rows.length?loaded.filter(r=>r.total===0).length:'…'}</strong><span>{unnamed>0?`${unnamed} unnamed, not checked`:null}</span></div>
   </div>
-  {error&&<div className="notice error" role="alert"><TriangleAlert size={18}/><span>{error}</span></div>}
+  {error&&<div className="notice error" role="alert"><TriangleAlert size={16}/><span>{error}</span></div>}
   {offline.length>0&&<p className="market-offline muted">Not connected: {offline.map(p=>p.name).join(', ')}</p>}
   <div className="table-scroll"><table className="market-table"><thead><tr><th>Component</th><th>On board</th>{cols.map(c=><th key={c} className="num-col">{c}</th>)}{others&&<th className="num-col">Others</th>}<th className="num-col">Total stock</th><th aria-label="Compare"/></tr></thead>
    <tbody>{table.map(r=>{const open=!closed.has(r.mpn),by=new Map(r.segs.map(x=>[x.seller,x])),rest=r.segs.filter(x=>!cols.includes(x.seller)&&x.priceUsd!=null).sort((a,b)=>a.priceUsd-b.priceUsd)[0],low=Math.min(...r.segs.filter(x=>x.priceUsd!=null).map(x=>x.priceUsd));
-    const cell=(x,key,name)=>r.loading?<td key={key} className="numeric muted">…</td>:!x||x.priceUsd==null&&!x.stock?<td key={key} className="numeric muted">—</td>:<td key={key} className={'numeric price-cell'+(x.priceUsd!=null&&x.priceUsd===low?' best':'')}>{x.priceUsd!=null?money(x.priceUsd):'—'}<small className="price-note">{fmt(x.stock)} in stock{name?' · '+name:''}</small></td>;
+    const cell=(x,key,name)=>r.loading?<td key={key} className="numeric muted">…</td>:!x||x.priceUsd==null&&!x.stock?<td key={key} className="numeric"><em className="na">Not available</em></td>:<td key={key} className={'numeric price-cell'+(x.priceUsd!=null&&x.priceUsd===low?' best':'')}>{x.priceUsd!=null?money(x.priceUsd):'Not available'}<small className="price-note">{fmt(x.stock)} in stock{name?' · '+name:''}</small></td>;
     return <React.Fragment key={r.mpn}><tr className={'market-row'+(open?' open':'')} onMouseEnter={()=>onFocus?.(r.part)} onMouseLeave={()=>onFocus?.(null)}>
-    <td><button type="button" className="market-toggle" aria-expanded={open} aria-label={`${open?'Close':'Open'} the market listing for ${r.mpn}`} onClick={()=>setClosed(c=>{const n=new Set(c);n.has(r.mpn)?n.delete(r.mpn):n.add(r.mpn);return n})}><ChevronDown size={14}/></button><button type="button" className="part-link" onClick={()=>onFocus?.(r.part,true)}><span><strong>{r.mpn}</strong><small>{r.part.package||r.part.type}</small></span></button></td>
+    <td><button type="button" className="market-toggle" aria-expanded={open} aria-label={`${open?'Close':'Open'} the market listing for ${r.mpn}`} onClick={()=>setClosed(c=>{const n=new Set(c);n.has(r.mpn)?n.delete(r.mpn):n.add(r.mpn);return n})}><ChevronDown size={16}/></button><button type="button" className="part-link" onClick={()=>onFocus?.(r.part,true)}><span><strong>{r.mpn}</strong><small>{r.part.package||r.part.type}</small></span></button></td>
     <td><span className="ref-chip">{refRange(r.refs)}</span><small className="price-note">×{r.refs.length} per board</small></td>
     {r.failed?<td colSpan={cols.length+(others?1:0)} className="muted">Lookup failed</td>:<>{cols.map(c=>cell(by.get(c),c))}{others&&cell(rest,'others',rest?.seller)}</>}
     <td className="numeric">{r.loading?'…':fmt(r.total)}</td>
-    <td><button type="button" className="button small" onClick={()=>onCompare?.(r.mpn)} aria-label={`Compare all markets for ${r.mpn}`}><Radar size={13}/>Radar</button></td>
+    <td><button type="button" className="button small" onClick={()=>onCompare?.(r.mpn)} aria-label={`Compare all markets for ${r.mpn}`}><Radar size={16}/>Radar</button></td>
    </tr>{open&&!r.loading&&!r.failed&&<tr className="market-offers"><td colSpan={span}>
     <div className="offer-providers">{(r.providers||[]).map(p=><span key={p.id} className={'provider-chip '+p.status} title={p.error||p.need||''}>{p.name}<b>{p.status==='ok'?p.count:p.status==='error'?'error':'off'}</b></span>)}</div>
-    {r.offers.length?<table className="offer-table" aria-label={`Market listing for ${r.mpn}`}><thead><tr><th>Seller</th><th>Unit price</th><th>Stock</th><th>Delivery</th><th>MOQ</th><th>Score</th><th aria-label="Link"/></tr></thead><tbody>{r.offers.map(o=><tr key={o.seller}>
-     <td><strong>{o.seller}</strong><small className="price-note">{o.authorized?'Authorised':'Marketplace'} · {o.sources.map(x=>x==='serpapi'?'Google Shopping':x).join(', ')}</small></td>
-     <td className="numeric">{o.price==null?'—':`${o.currency==='USD'?'$':o.currency==='INR'?'₹':(o.currency||'')+' '}${o.price<1?o.price.toFixed(o.price<.1?4:3):o.price.toFixed(2)}`}{o.currency&&o.currency!=='USD'&&o.priceUsd!=null&&<small className="price-note">≈ ${o.priceUsd.toFixed(o.priceUsd<1?3:2)}</small>}</td>
-     <td className="numeric">{o.stock==null?'Unknown':fmt(o.stock)}</td><td>{o.stock>0?'Ships now':o.leadDays!=null?`${o.leadDays} days`:'Unknown'}</td><td className="numeric">{o.moq==null?'—':fmt(o.moq)}</td>
+    {r.offers.length?<table className="offer-table" aria-label={`Market listing for ${r.mpn}`}><thead><tr><th>Seller</th><th>Unit price ({m$.currency})</th><th>Stock</th><th>Delivery</th><th>MOQ</th><th>Score</th><th aria-label="Link"/></tr></thead><tbody>{r.offers.map(o=><tr key={o.seller}>
+     <td><strong>{o.seller}</strong><small className="price-note">{o.authorized?'Authorised':'Open market · unverified'} · {o.sources.map(x=>x==='serpapi'?'Google Shopping':x).join(', ')}</small></td>
+     <td className="numeric">{o.priceUsd!=null?money(o.priceUsd):<em className="na">Not available</em>}{o.price!=null&&o.currency&&o.currency!==m$.currency&&<small className="price-note">quoted {o.currency} {o.price}</small>}</td>
+     <td className="numeric">{o.stock==null?'Not available':fmt(o.stock)}</td><td>{o.stock>0?'Ships now':o.leadDays!=null?`${o.leadDays}\u00a0days`:'Not available'}</td><td className="numeric">{o.moq==null?'Not available':fmt(o.moq)}</td>
      <td className="numeric"><span className="score-pill" style={{'--s':o.overall+'%'}}>{o.overall}</span></td>
-     <td>{typeof o.url==='string'&&/^https:\/\//.test(o.url)&&<a href={o.url} target="_blank" rel="noreferrer" aria-label={`Open ${o.seller} offer for ${r.mpn}`}><ExternalLink size={14}/></a>}</td></tr>)}</tbody></table>:<p className="muted offer-empty">Not listed.</p>}
+     <td>{typeof o.url==='string'&&/^https:\/\//.test(o.url)&&<a href={o.url} target="_blank" rel="noreferrer" aria-label={`Open ${o.seller} offer for ${r.mpn}`}><ExternalLink size={16}/></a>}</td></tr>)}</tbody></table>:<p className="muted offer-empty">Not listed.</p>}
    </td></tr>}</React.Fragment>})}</tbody></table></div>
   
  </section>;

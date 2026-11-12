@@ -17,6 +17,27 @@ export const isAuthorized=o=>o?.marketType?o.marketType==='authorized':o?.author
 export const allOffers=row=>[...(row?.offers||[]),...(row?.manualOffers||[]),...(row?.vendorOffers||[])];
 export const MARKET_TYPES=[['authorized','Authorised distributor'],['ems-excess','EMS excess'],['oem-excess','OEM/ODM excess'],['broker','Broker'],['marketplace','Marketplace listing'],['registered','Registered vendor']];
 export const marketLabel=t=>(MARKET_TYPES.find(m=>m[0]===t)||[null,'Not stated'])[1];
+// Where a price comes from, in the fixed words of the price checks (own stock, authorised distributors,
+// registered vendors, open market). Everything that is not authorised or registered is open market.
+export function provenanceOf(o,{own=false}={}){
+ if(own)return 'Own stock';if(!o)return null;
+ if(o.marketType==='registered'||o.source==='register')return 'Registered vendor';
+ return isAuthorized(o)?'Authorised':'Open market · unverified';
+}
+// The age of a price: "fetched 2 h ago" (a no-break space between number and unit). stale: older than 24 h.
+export function priceAge(iso,now=Date.now()){
+ const t=Date.parse(iso);if(!iso||!Number.isFinite(t))return {text:'',stale:false};
+ const min=Math.max(0,Math.round((now-t)/6e4)),h=Math.round(min/60),d=Math.round(min/1440);
+ const text=min<1?'fetched just now':min<60?`fetched ${min}\u00a0min ago`:min<48*60?`fetched ${h}\u00a0h ago`:`fetched ${d}\u00a0days ago`;
+ return {text,stale:min>24*60};
+}
+// One caption line under a price: provenance word, seller and age. warn: open market or older than 24 h.
+export function priceNote(o,{own=false,at=null,now=Date.now()}={}){
+ const word=provenanceOf(o,{own});if(!word)return null;
+ const age=own?{text:'',stale:false}:priceAge(o?.registeredAt||o?.addedAt||o?.fetchedAt||at,now);
+ const parts=[word];if(!own&&o?.seller)parts.push(o.seller);if(age.text)parts.push(age.text);
+ return {text:parts.join(' · '),warn:word==='Open market · unverified'||age.stale};
+}
 // Quantity that must actually be ordered: at least the MOQ, rounded up to the order multiple.
 export function orderQty(offer,qty){const q=Math.max(num(qty),num(offer?.moq)||0),m=num(offer?.mult)||1;return q>0?Math.ceil(q/m)*m:0}
 // Days until the parts can ship: 0 when the offer holds enough stock, else the factory lead time.
@@ -246,24 +267,21 @@ export function supplierShipping(calcs,rules={}){
 //   actual shipping       = supplier shipping + delivery to the customer (our cost)
 //   shipping charged      = 0 with free shipping, else the amount set to charge (default: actual shipping)
 //   customer total        = selling subtotal + shipping charged
-//   net profit            = customer total − component, PCB, enclosure, tooling and shipping costs
-export function quoteTotals(calcs,{boards=1,pcb=null,enclosure=null,consumables=null,method='markup',inbound=0,deliveryCost=0,freeShipping=false,charge=null}={}){
+//   net profit            = customer total − component, PCB, consumables and shipping costs
+export function quoteTotals(calcs,{boards=1,pcb=null,consumables=null,method='markup',inbound=0,deliveryCost=0,freeShipping=false,charge=null}={}){
  const n=Math.max(0,num(boards));
  const priced=calcs.filter(c=>!c.missing);
  const componentCost=priced.reduce((a,c)=>a+c.lineCost,0),componentsSell=priced.reduce((a,c)=>a+c.lineSell,0);
  const pcbPriced=!!pcb?.on&&pcb.unit!=null&&pcb.unit!=='';const pcbCost=pcbPriced?Math.max(0,num(pcb.unit))*n:0,pcbSell=pcbPriced?sellPrice(pcbCost,pcb.margin,method):0;
- const enclosurePriced=!!enclosure?.on&&enclosure.unit!=null&&enclosure.unit!=='';
- const enclosureCost=enclosurePriced?Math.max(0,num(enclosure.unit))*n+Math.max(0,num(enclosure.tooling)):0;
- const enclosureSell=sellPrice(enclosureCost,enclosure?.margin,method);
  // Process consumables from the Analysis step (paste, stencil, wipes …), when chosen for the quote.
  const consumablesCost=consumables?.on?Math.max(0,num(consumables.cost)):0,consumablesSell=consumablesCost?sellPrice(consumablesCost,consumables.margin,method):0;
- const sellingSubtotal=componentsSell+pcbSell+enclosureSell+consumablesSell;
+ const sellingSubtotal=componentsSell+pcbSell+consumablesSell;
  const actualShipping=Math.max(0,num(inbound))+Math.max(0,num(deliveryCost));
  const shippingCharged=freeShipping?0:charge==null||charge===''?actualShipping:Math.max(0,num(charge));
  const customerTotal=sellingSubtotal+shippingCharged;
- const cost=componentCost+pcbCost+enclosureCost+consumablesCost;
+ const cost=componentCost+pcbCost+consumablesCost;
  const netProfit=customerTotal-cost-actualShipping;
- return {componentCost,componentsSell,pcbCost,pcbSell,enclosureCost,enclosureSell,consumablesCost,consumablesSell,enclosureUnpriced:!!enclosure?.on&&!enclosurePriced,sellingSubtotal,supplierShipping:Math.max(0,num(inbound)),deliveryCost:Math.max(0,num(deliveryCost)),actualShipping,shippingCharged,customerTotal,netProfit,
+ return {componentCost,componentsSell,pcbCost,pcbSell,consumablesCost,consumablesSell,sellingSubtotal,supplierShipping:Math.max(0,num(inbound)),deliveryCost:Math.max(0,num(deliveryCost)),actualShipping,shippingCharged,customerTotal,netProfit,
   perBoard:n?customerTotal/n:0,margin:sellingSubtotal-cost,missing:calcs.filter(c=>c.missing).length,short:calcs.filter(c=>c.short).length,pcbUnpriced:!!pcb?.on&&!pcbPriced};
 }
 
@@ -310,7 +328,7 @@ export function bomSummary(rows,calcs,risks,inventoryHas=()=>false){
 }
 
 // --- Purchase list and bids----------------------------------------------------------------------------------
-// The purchase list (cart* helpers): semi-cobot never places orders. Lines are grouped per supplier and
+// The purchase list (cart* helpers): Industriverse PCBA never places orders. Lines are grouped per supplier and
 // export as CSV for the supplier's BOM upload.
 // sum: add the quantity to a line already in the list (the same part on two BOM lines) instead of replacing it.
 export function cartAdd(cart,item,{sum=false}={}){const k=x=>String(x.mpn).toUpperCase()+'|'+x.seller;const i=cart.findIndex(x=>k(x)===k(item));
