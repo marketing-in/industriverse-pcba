@@ -1,14 +1,15 @@
 {
   "name": "industriverse-pcba",
   "version": "1.0.0",
-  "description": "Industriverse PCBA: a PCB assembly workspace in three lines. Engineering (board studio, SMT line), Supply (BOM tool, parts, purchases) and Production (jobs, dispatch).",
+  "description": "Industriverse PCBA: a PCB assembly workspace in three lines. Engineering (board studio, board types), Supply (BOM tool, parts, purchases, vendors) and Production (jobs, SMT line, machines, dispatch).",
   "main": "index.js",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "server": "node --env-file-if-exists=.env server.mjs",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "env:sync": "node scripts/sync-env.mjs"
   },
   "keywords": [],
   "author": "",

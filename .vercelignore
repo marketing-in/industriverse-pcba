@@ -1,15 +1,15 @@
-# The Vercel CLI uploads everything not listed here; it does not read .gitignore.
-# Secrets and local data never leave this machine. A leading / anchors a pattern to the project root:
-# without it, data/ would also drop public/data, which the app loads at runtime.
+# Never upload local secrets or local-only data with `vercel deploy`.
 .env
 .env.*
 !.env.example
-/data/
-/deploy/
-/dist/
+.DS_Store
 node_modules/
-/test-results/
-/tests/
-/scripts/
-/supabase/
+dist/
+test-results/
+deploy/
+deliverables/
+data/part-info.json
+data/part-info.json.tmp
+data/auth.json
+data/auth.json.tmp
 *.tar.gz

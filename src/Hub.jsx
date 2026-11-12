@@ -29,8 +29,7 @@ export default function Hub({boards=[],activeBoardId,parts=[],attention=0,lists=
  const Reel=lineOf('supply').icon;
  // Engineering
  const gerber=boards.filter(b=>b.surface||b.gerberSource||/gerber/i.test(b.source||'')).length;
- const machines=production?.machines||[],smt=machines.filter(m=>m.kind==='SMT line').length;
- const lastBoard=boards.find(b=>b.id===activeBoardId)||boards[boards.length-1]||null;
+  const lastBoard=boards.find(b=>b.id===activeBoardId)||boards[boards.length-1]||null;
  const fromBoard=new Set(lists.map(l=>l.state?.from).filter(Boolean));
  const unpriced=boards.filter(b=>!fromBoard.has(b.name));
  // Supply
@@ -39,6 +38,7 @@ export default function Hub({boards=[],activeBoardId,parts=[],attention=0,lists=
  const openList=bomOpen&&((bomOpen.rows||[]).length||bomOpen.project)?{name:bomOpen.project||bomOpen.from||'Untitled BOM',lines:(bomOpen.rows||[]).length,list:lists.find(l=>l.id===bomOpen.listId)||null}:null;
  const ready=lists.filter(l=>l.status==='quoted'&&!l.jobId);
  // Production
+ const machines=production?.machines||[],smt=machines.filter(m=>m.kind==='SMT line').length;
  const jobs=production?.jobs||[],active=jobs.filter(j=>!j.finished).map(j=>({j,state:jobState(j),info:stageInfo(j)}));
  const count=s=>active.filter(a=>a.state===s).length,running=count('Running'),rework=count('Rework'),queued=count('Queued'),held=count('Hold'),stopped=count('Stopped');
  const order={Stopped:0,Hold:1,Rework:2,Running:3,Queued:4,Done:5};const shown=[...active].sort((a,b)=>order[a.state]-order[b.state]).slice(0,3);
@@ -47,8 +47,7 @@ export default function Hub({boards=[],activeBoardId,parts=[],attention=0,lists=
   <section className="hub-lane" data-line="engineering" aria-label="Engineering">
    <LaneHead id="engineering" onGo={onGo}/>
    <p className="lane-facts">
-    {boards.length?<><Fact value={boards.length} one="board" to="Board studio" onGo={onGo}/> in the studio, {gerber?<>{num(gerber)} with Gerber files.</>:'none with Gerber files.'}</>:<>No boards of your own yet. Board studio shows the <a className="fact" href={hashOf('Board studio')} onClick={e=>{e.preventDefault();onGo('Board studio')}}>sample board CTRL-01</a>.</>}{' '}
-    {smt?<><Fact value={smt} one="SMT line" to="SMT line" onGo={onGo}/>, <Fact value={machines.length} one="machine" to="Machines" onGo={onGo}/>.</>:machines.length?<><Fact value={machines.length} one="machine" to="Machines" onGo={onGo}/>, no SMT line yet.</>:'No machines set up.'}
+    {boards.length?<><Fact value={boards.length} one="board" to="Board studio" onGo={onGo}/> in the studio, {gerber?<>{num(gerber)} with Gerber files.</>:'none with Gerber files.'}</>:<>No boards of your own yet. Board studio shows the <a className="fact" href={hashOf('Board studio')} onClick={e=>{e.preventDefault();onGo('Board studio')}}>sample board CTRL-01</a>.</>}
    </p>
    {firstRun?<div className="lane-resume" role="region" aria-label="Get started">
      <p>No board loaded. Add a Gerber ZIP, a .kicad_pcb, a .pos file or a .glb.</p>
@@ -76,6 +75,7 @@ export default function Hub({boards=[],activeBoardId,parts=[],attention=0,lists=
    <LaneHead id="production" onGo={onGo}/>
    <p className="lane-facts">
     {active.length?<>{running?<><Fact value={running} one="job running" more="jobs running" to="Production" onGo={onGo}/></>:'No jobs running'}{rework?<>, <Fact value={rework} one="in rework" more="in rework" to="Production" onGo={onGo}/></>:''}{queued?<>, <Fact value={queued} one="queued" more="queued" to="Production" onGo={onGo}/></>:''}{held?<>, <Fact value={held} one="on hold" more="on hold" to="Production" onGo={onGo}/></>:''}{stopped?<>, <Fact value={stopped} one="stopped" more="stopped" to="Production" onGo={onGo}/></>:''}.</>:'No jobs running.'}{' '}
+    {smt?<><Fact value={smt} one="SMT line" to="SMT line" onGo={onGo}/>, <Fact value={machines.length} one="machine" to="Machines" onGo={onGo}/>. </>:machines.length?<><Fact value={machines.length} one="machine" to="Machines" onGo={onGo}/>, no SMT line yet. </>:'No machines set up. '}
     Shifts: {calendarText(calendarOf(production))}.
    </p>
    {shown.length?<ul className="hub-jobs" aria-label="Active jobs">{shown.map(({j,state,info})=>{const st=STAGES[info.current];

@@ -14,9 +14,9 @@ React 19, Vite, three.js, lucide-react, jsPDF. One global stylesheet, `src/style
 
 One small or mid-size Indian electronics manufacturer (EMS / PCB assembly shop, 10 to 200 people). Three roles, often the same person wearing two hats.
 
-- **Design or process engineer** (Engineering). At a desk with a large monitor and a mouse. Opens a customer's Gerber package, checks the board in 2D and 3D, attaches part models, runs the 3D SMT line simulation before a job is released. Long sessions, sometimes in the evening with the dark theme.
+- **Design or process engineer** (Engineering). At a desk with a large monitor and a mouse. Opens a customer's Gerber package, checks the board in 2D and 3D, attaches part models. Long sessions, sometimes in the evening with the dark theme.
 - **Buyer or estimator** (Supply), often the owner. At a desk under office tube light with a spreadsheet, vendor quotes and a phone beside the keyboard. Turns a board into a priced bill of materials and a quotation, chases prices, keeps stock, purchases and vendors current. Thinks in ₹, quotes some customers in $.
-- **Production supervisor or line lead** (Production). Standing on the floor under bright 5000 K LED light, at a wall screen, a shared PC or a tablet on a trolley, sometimes in ESD gloves, interrupted constantly. Reads a job's stage from one to three metres away, ticks a stage, moves a job to another line or shift.
+- **Production supervisor or line lead** (Production). Standing on the floor under bright 5000 K LED light, at a wall screen, a shared PC or a tablet on a trolley, sometimes in ESD gloves, interrupted constantly. Reads a job's stage from one to three metres away, ticks a stage, moves a job to another line or shift, runs the 3D SMT line simulation before a job is released and keeps the machines list current.
 - **Admin** (any of the above). Signs people in, manages the team, reads the home hub.
 
 Use scenes:
@@ -29,9 +29,11 @@ Use scenes:
 
 Industriverse PCBA takes one customer board from files to shipped assemblies inside one site with exactly three lines:
 
-1. **Engineering**: everything that is 3D. Board studio (2D and 3D board, Gerber reading and rendering, part 3D models as GLB), the 3D SMT line simulation and its machines, the board types library.
-2. **Supply**: the BOM tool for the bare PCB and its components only (Bare PCB, Components, Analysis, Quotation), saved lists with revisions, part master, inventory and purchases, vendors, price sources.
-3. **Production**: production jobs, the twelve factory stages with their quality gates, shifts, kitting, masking, moving a job, dispatch.
+1. **Engineering**: the board. Board studio (2D and 3D board, Gerber reading and rendering, part 3D models as GLB) and the board types library.
+2. **Supply**: the BOM tool for the bare PCB and its components only (Bare PCB, Components, Analysis, Quotation), saved lists with revisions, part master, inventory and purchases, vendors.
+3. **Production**: production jobs, the twelve factory stages with their quality gates, shifts, kitting, masking, moving a job; the 3D SMT line simulation; the factory floor (SMT lines, their stations and the other machines); dispatch.
+
+One board is selected at a time, and it is the same board on every line.
 
 Success: a board uploaded in Engineering becomes a priced list in Supply and a running job in Production without anything being typed twice; a buyer can answer "what does this board cost, from whom, and how sure are we"; and anyone can tell from across the room which job is running, held or stopped.
 
@@ -43,9 +45,9 @@ The thin, exact layer between the EDA tool and the ERP for a small manufacturer:
 
 - Files in: Gerber ZIP (X2/X3 attributes), `.kicad_pcb`, pick-and-place `.pos`, `ibom.html`, BOM as Excel or CSV, GLB part and board models.
 - Documents out: quotation PDF (`src/quotePdf.js`), request-for-quotation mail (`src/rfq.js`), Excel exports.
-- Price sources: own stock, authorised distributors (DigiKey, Mouser, Nexar, TME, Master Electronics), registered vendors, open market.
+- Prices are looked up in this order: own stock, authorised distributors, registered vendors, open market. Distributor keys are set on the server only; no page lists or configures them.
 - Money in INR or USD, switchable at any time from the band (`CurrencyProvider` in `src/currency.jsx`); INR uses Indian digit grouping (`en-IN`).
-- Records live in the browser (localStorage keys keep their `semicobot-*` prefix so existing workspaces survive the rename) with optional cloud sync; the server holds keys, sign-in and caches.
+- Records live in the browser (localStorage keys use the `semicobot-*` prefix) with optional cloud sync; the server holds keys, sign-in and caches.
 - Floor conditions: 5000 K LED light, glare on the glass, viewing distance up to three metres, gloved or hurried touches, shared machines, unreliable Wi-Fi.
 - Light and dark themes both ship. Light is the default.
 - Shop vocabulary that stays as it is: BOM, MPN, DNP, Gerber, bare PCB, SMT, THT, AOI, SPI, reflow, stencil, kitting, MOQ, RoHS, date code.
@@ -57,16 +59,18 @@ The only pages that exist:
 | Line | Pages (tabs, in order) |
 |---|---|
 | Home | the three-line hub |
-| Engineering | Board studio · SMT line · Machines · Board types |
-| Supply | BOM tool · Saved lists · Part master · Inventory · Purchases · Vendors · Price sources |
-| Production | Jobs · Dispatch |
-| (no line) | Sign-in; the account menu (Team for admins, Sign out) |
+| Engineering | Board studio · Board types |
+| Supply | BOM tool · Saved lists · Part master · Inventory · Purchases · Vendors |
+| Production | Jobs · SMT line · Machines · Dispatch |
+| (no line) | Sign-in; the account menu (Team for admins, Sign out); Help (side sheet) and the tours |
 
 - The BOM tool has four steps: Bare PCB (required), Components (required), Analysis (optional), Quotation.
 - Shifts, kitting, masking, group by setup and move job live inside Jobs. Part models are attached in the Board studio inspector.
 - Vendor kinds: Semiconductor, Distributor, Passive, PCB, Test lab, Logistics.
 - Removed entirely: the enclosure ("the box") and the mould. Not shown, not priced, not fetched, no enclosure or mould vendor kinds, no enclosure line in a quotation or a saved list.
-- Removed surfaces: the Overview bento dashboard, the Alerts page (parts below minimum are a count on the Inventory tab, a filter inside Inventory and a sentence on the hub), Help, the Intro marketing page, the product tour and the BOM demo tour. Sign-in stays because the server needs it.
+- Parts below minimum are a count on the Inventory tab, a filter inside Inventory and a sentence on the hub; there is no separate alerts page and no dashboard.
+- Help is a side sheet, not a page: the page you are on first, the tours, every page with what it is for and how to use it, keyboard shortcuts, sample data. Opened with the ? button, the ? key or Search and jump.
+- Tours (following the impeccable onboarding rules): *From board to shipped job* and one per line, three to seven steps each. A step opens its page and lights the real control; the page stays usable; Skip tour and Esc always work; Home offers the first tour once per account; every tour can be taken again from Help.
 - Layouts work at 1440, 1024, 768 and 375 px.
 
 ## Brand Commitments
@@ -111,7 +115,7 @@ WCAG 2.2 AA in both themes. Body and placeholder text at least 4.5:1; control bo
 - Identifiers are never reworded or truncated in the middle: part numbers, designators, serials, quotation numbers and file names are shown whole in the identifier face.
 - No arrow characters in interface text (the UI face has no arrow glyph). A hand-off is written "Engineering to Supply" or drawn with an icon.
 - One name per thing: "Bare PCB" (not blank board, not fab), "Saved list" (not project), "Job" (not order, not work order), "Line" for the three sections, "SMT line" for a machine line.
-- Words that never appear in the interface: enclosure, box, mould, dashboard, overview, alerts, tour, semi-cobot.
+- Words that never appear in the interface: enclosure, box, mould, dashboard, overview, alerts, semi-cobot.
 
 ## What the product is not
 
@@ -120,4 +124,4 @@ WCAG 2.2 AA in both themes. Body and placeholder text at least 4.5:1; control bo
 - Not an EDA editor: it reads and shows boards, it does not route or edit copper.
 - Not a marketplace or checkout: it compares offers and writes quote-request mails; it never places an order.
 - Not a guesser: no invented part numbers, prices, lead times or stock.
-- Not a marketing site and not a wall of KPIs: no intro page, no tour, no feature grid, no bento. The hub is three lines and the flow between them.
+- Not a marketing site and not a wall of KPIs: no intro page, no feature grid, no bento. The hub is three lines and the flow between them. Tours teach the real product; there is no separate demo mode.

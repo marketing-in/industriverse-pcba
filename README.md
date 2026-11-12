@@ -10,11 +10,13 @@ A workspace for a small or mid-size PCB assembly shop. It takes one customer boa
 | Line | Pages (tabs, in order) | What happens there |
 |---|---|---|
 | Home | Hub | The three lines and the flow between them, with real counts from the workspace. |
-| Engineering | Board studio · SMT line · Machines · Board types | Open a Gerber ZIP, `.kicad_pcb`, pick-and-place `.pos` or `ibom.html`; check the board in 2D and 3D; attach part models (GLB) in the inspector; run the 3D SMT line simulation; set up machines; keep the board types library. |
-| Supply | BOM tool · Saved lists · Part master · Inventory · Purchases · Vendors · Price sources | Turn a board into a priced bill of materials and a quotation; keep saved lists with revisions; maintain the part master, stock, purchase orders and vendors; see which price sources are configured. |
-| Production | Jobs · Dispatch | Production jobs through the twelve factory stages and their quality gates, with shifts, kitting, masking, group by setup and move job; dispatch of finished boards. |
+| Engineering | Board studio · Board types | Open a Gerber ZIP, `.kicad_pcb`, pick-and-place `.pos` or `ibom.html`; check the board in 2D and 3D; attach part models (GLB) in the inspector; keep the board types library. |
+| Supply | BOM tool · Saved lists · Part master · Inventory · Purchases · Vendors | Turn a board into a priced bill of materials and a quotation; keep saved lists with revisions; maintain the part master, stock, purchase orders and vendors. |
+| Production | Jobs · SMT line · Machines · Dispatch | Production jobs through the twelve factory stages and their quality gates, with shifts, kitting, masking, group by setup and move job; the 3D SMT line simulation of the selected board; the factory floor (SMT lines with their stations, other machines and their details); dispatch of finished boards. |
 
 Sign-in sits in front of all of it when the server asks for it; the account menu holds Team (admins) and Sign out.
+
+**Help and tours.** The ? button in the top bar (or the ? key) opens Help: the page you are on first, then four tours, every page of every line with what it is for and how to use it (searchable), the keyboard shortcuts and the sample data switch. The tours are *From board to shipped job* (seven steps across the three lines) and one per line (Engineering, Supply, Production). Each step opens its page and lights the real control; the page stays usable, Esc or Skip tour ends it, the arrow keys move. Home offers the first tour once per account; finished and closed tours are remembered per account in `semicobot-tours-v1:<account>`. Search and jump (Ctrl K) also lists Help and every tour. The content lives in `src/help.js`, the panel and the tour in `src/Help.jsx`.
 
 **One selected board for all three lines.** The board you add (a Gerber in Board studio or in BOM step 1) or pick (in Board studio, or in the "Board" picker in the heading of every line page) is the selected board everywhere: Board studio and the SMT line show it, the BOM tool opens its BOM, and Production's new request is filled with it (Jobs can show only that board's jobs). The BOM tool keeps one BOM per board: switching boards puts the open BOM aside as that board's draft (`semicobot-bom-drafts-v1`) and shows the new board's draft, else its newest saved list, else a new BOM built from the board. Selecting the first board again brings its work back. Opening a saved list selects the board it was made from.
 
@@ -52,7 +54,7 @@ On a first run there are no accounts: the sign-in screen creates the first (admi
 
 ## Configuration
 
-Copy `.env.example` to `.env` in the project root and fill in what you have. `.env` is git-ignored and is read only by server code (`server.mjs`, `api.mjs`, `hosted.mjs`, the scripts). Nothing in `src/` reads the environment, and no variable is ever prefixed with `VITE_`, so no key can reach the browser. `/api/status` reports only whether each source is configured, never a value.
+Copy `.env.example` to `.env` in the project root and fill in what you have. `.env` is git-ignored and is read only by server code (`server.mjs`, `api.mjs`, `hosted.mjs`, the scripts). Nothing in `src/` reads the environment, and no variable is ever prefixed with `VITE_`, so no key can reach the browser. `/api/status` reports only whether each source is configured (as true or false, never a value); the app uses it to say when prices cannot be fetched.
 
 Variable names:
 

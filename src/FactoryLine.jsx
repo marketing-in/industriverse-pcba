@@ -29,9 +29,9 @@ const label=(text,THREEns,sub='')=>{const c=document.createElement('canvas');c.w
 
 // The clicked machine's own details (Factory setup): what it is, when it was built, its footprint.
 function MachineCard({line,short,d,present}){
- if(!line)return <div className="fl-card muted">Add your lines and their machines in Engineering, Machines to see each machine's maker, model, year and size here.</div>;
+ if(!line)return <div className="fl-card muted">Add your lines and their machines in Production, Machines to see each machine's maker, model, year and size here.</div>;
  if(!present)return <div className="fl-card muted">{line.name} has no {short} station; this one is simulated.</div>;
- if(!d)return <div className="fl-card muted">No details yet for the {short} on {line.name}. Add maker, model, year and size under Details in Engineering, Machines.</div>;
+ if(!d)return <div className="fl-card muted">No details yet for the {short} on {line.name}. Add maker, model, year and size under Details in Production, Machines.</div>;
  const rows=[['Year built',d.year],['Model introduced',d.introduced],['Footprint (L × W × H)',footprint(d)],['Weight',d.weight&&`${d.weight.toLocaleString('en-IN')} kg`],['Power',d.power],['Speed / capacity',d.speed],['Serial number',d.serial],['Notes',d.notes]].filter(([,v])=>v);
  return <div className="fl-card" role="region" aria-label="Machine details"><strong>{[d.maker,d.model].filter(Boolean).join(' ')||short}</strong><small className="muted">{line.name} · {short}</small>
   <dl>{rows.map(([k,v])=><div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
@@ -39,7 +39,7 @@ function MachineCard({line,short,d,present}){
 }
 
 export default function FactoryLine({board,parts,lines=[]}){
- // Your own SMT lines (Engineering, Machines): the chosen line's machine details show on the
+ // Your own SMT lines (Production, Machines): the chosen line's machine details show on the
  // station labels, the station buttons and the machine's card. Stations it does not have are marked.
  const [lineId,setLineId]=useState(()=>lines[0]?.id||'');const myLine=lines.find(l=>l.id===lineId)||lines[0]||null;
  const machineAt=short=>myLine?detailsOf(myLine,short):null,hasStation=short=>!myLine||stationsOf(myLine).includes(short);

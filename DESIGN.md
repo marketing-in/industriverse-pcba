@@ -321,9 +321,11 @@ Pages (label, and the leaf id `navigate()` keeps using):
 | Line (`data-line`) | Glyph | Tabs in the band |
 |---|---|---|
 | Home (attribute absent) | the Route mark | none |
-| Engineering (`engineering`) | lucide `Layers` | Board studio (`Board studio`) · SMT line (`SMT line`, mounts `FactoryLine`) · Machines (`Machines`, mounts `FactorySetup`) · Board types (`Board types`) |
-| Supply (`supply`) | authored `ReelIcon` | BOM tool · Saved lists · Part master · Inventory · Purchases · Vendors · Price sources (leaf id `Integrations`) |
-| Production (`production`) | lucide `Factory` | Jobs (leaf id `Production`) · Dispatch (`Dispatch`, mounts `BoardFlow`) |
+| Engineering (`engineering`) | lucide `Layers` | Board studio (`Board studio`) · Board types (`Board types`) |
+| Supply (`supply`) | authored `ReelIcon` | BOM tool · Saved lists · Part master · Inventory · Purchases · Vendors |
+| Production (`production`) | lucide `Factory` | Jobs (leaf id `Production`) · SMT line (`SMT line`, mounts `FactoryLine`) · Machines (`Machines`, mounts `FactorySetup`) · Dispatch (`Dispatch`, mounts `BoardFlow`) |
+
+Every line page except Board studio carries the **Board picker** (`.board-select`) beside its title: the one selected board, shared by all three lines. A page found under another line's address (`#/engineering/smt-line`) opens where it lives now.
 
 A rail tile opens the line's last-used page (first page on first visit). Counts ride on a tab as plain tabular figures after the name: "Inventory 4" (parts below minimum), "Jobs 3" (unfinished jobs). No coloured bubbles.
 
@@ -517,12 +519,12 @@ One element in three sizes.
 One screen, reached from the mark. `data-line` is absent, the band is Bench ink and reads "Industriverse PCBA", no rail tile is selected. The page answers three questions in order: what is on each line now, what is waiting to cross to the next line, and where did I leave off. `h1` is "Home".
 
 ```
-[mark] Industriverse PCBA                      [Search or jump] [Sample data] [cloud] [₹|$] [th] [AK]
+[mark] Industriverse PCBA                  [Search or jump] [Sample data] [cloud] [₹|$] [?] [th] [AK]
 +------+------------------------------------------------------------------------------------------+
 |      |  Home                                                                                     |
 | Eng  |  ---------------------------------------------------------------------------------------- |
 | Sup  |  [E]  Engineering                                                                         |
-| Prod |       7 boards in the studio, 5 with Gerber files. 3 SMT lines, 14 machines.              |
+| Prod |       7 boards in the studio, 5 with Gerber files.                                        |
 |      |       Last open: PSU-CTRL rev C, Board studio                         [Resume board]      |
 |      |  --o------------------------------------------------------------------------------------- |
 |      |    |  2 boards have no priced list: PSU-CTRL rev C, LED-DRV-12     [Start a BOM]          |  joint
@@ -534,7 +536,7 @@ One screen, reached from the mark. `data-line` is absent, the band is Bench ink 
 |      |    |  1 quoted list is ready for production: MTR-IO rev A, 500 boards  [Continue to production]
 |      |  --o------------------------------------------------------------------------------------- |
 |      |  [P]  Production                                                                          |
-|      |       3 jobs running, 1 in rework, 2 queued. 2 shifts of 8 hours, 6 days.                 |
+|      |       3 jobs running, 1 in rework, 2 queued. 3 SMT lines, 14 machines. 2 shifts of 8 h.  |
 |      |       Orion · CTRL-01 × 250   [Running]  SMT, stage 5 of 12   ▬▬▬▬▮▭▭▭▭▭▭▭                |
 |      |       Vega · MTR-IO × 500     [Rework]   QA line, stage 9 of 12                           |
 +------+------------------------------------------------------------------------------------------+
@@ -571,6 +573,21 @@ Sample figures above are illustrative; the build shows real counts only.
 **Responsive.** 1024: the same; lane names at 22 px. 768: the same with the bottom bar. 375: lanes stack with 16 px padding; the sentence wraps to three or four lines; the resume action is a full-width secondary button; the Production lane shows one job row; a joint is two lines of text and a full-width button.
 
 **Checked against the refusals.** No label above any heading. No grid of same-size icon cards: three unequal text lanes with joints between them, no boxes. No hero metric: counts are inside sentences at body size. No gradient text, no glass. No thick coloured side border: ink appears only as the 40 px lane head and the Route nodes.
+
+### Help sheet
+
+Opened by the `?` icon button in the band (`.help-open`, after the currency switch), the `?` key anywhere outside a field, or Help in Search and jump. A native `<dialog>` docked to the right edge (`dialog.help-panel`): full height, `min(440px,100vw)` wide, `--surface` (`--float` in dark), a 1 px `--rule` on its left edge, no radius; it slides 24 px in over `--dur-3`. Focus starts in the search field; Esc or the backdrop closes it and focus returns to the opener.
+
+Order, top to bottom: the search field (`Search help: Gerber, quotation, stock, dispatch…`); **On this page** (the open page's name, its one-sentence purpose and its how-to lines, on the line's soft ink with a 3 px line-ink rule on the left); **Tours** (one row each: a 32 px line-ink square with the line glyph, or the Bench-ink square with a play glyph for the whole-flow tour, the title, the purpose and the step count, then `Done` with a check when finished and a Start or Again button); **Every page** (grouped under each line's 20 px glyph square, each page a disclosure row with its purpose, opening to the how-to lines and `Open <page>`); **Keyboard**; **Sample data** (Load or Remove). Searching filters Every page by page name, line name, purpose and how-to words and hides the other sections.
+
+### Tour
+
+Four tours, three to seven steps each (impeccable onboarding): *From board to shipped job* and one per line. Content in `src/help.js`, behaviour in `src/Help.jsx`.
+
+- A step opens its page, waits for its control (up to 4 s, pages load on demand), scrolls it into view and lights it: `.tour-spot` is a box at the control's rectangle plus 6 px, 8 px radius, a 2 px ring in the line's fg ink and a `200vmax` spread shadow at `rgba(16,23,30,.42)` (`rgba(0,0,0,.58)` dark) that dims the rest. Nothing blocks the pointer: the page stays usable during a tour.
+- The card (`.tour-card`, 360 px, `--float`, 3 px top rule in the line's fg ink, `--shadow-3`) sits below, above, right or left of the control, whichever fits inside a 16 px margin, else docks bottom-centre; under 640 px it always docks, above the bottom bar. It carries the tour name and `Step 2 of 7` (live region), a segment track (past `--rule`, current line ink), the step title (focused on every step) and one or two sentences, then `Skip tour` (text button) and `Back` / `Next` or `Done`.
+- Keys: Esc ends the tour, the right and left arrow keys move. Reduced motion removes the spotlight's glide.
+- Home shows a one-line offer above the lanes until the first tour is taken or set aside (`New here? … [Take the tour] Not now`), once per account. Finished and closed tours are kept per account (`semicobot-tours-v1:<account>`).
 
 ### Sign-in surface
 

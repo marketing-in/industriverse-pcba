@@ -434,7 +434,7 @@ export default function BomTool({parts=[],boards=[],activeBoardId,boardModel=[],
   </section>:<button type="button" className="text-button bom-board-3d-show" onClick={()=>toggle3d(true)}><CircuitBoard size={16}/>Show {gerberBoard.name} in 3D</button>)}
   {step===STEP.parts&&<><section className="panel bom-sheet" aria-label="Components">
    {header}{tools}
-   {ready===false&&<div className="studio-note"><TriangleAlert size={16}/> No distributor is connected, so prices cannot be fetched. Add DigiKey or Mouser keys as server secrets (Price sources).</div>}
+   {ready===false&&<div className="studio-note"><TriangleAlert size={16}/> No distributor is connected, so prices cannot be fetched. Distributor keys are added to the server's .env file by your administrator.</div>}
    {busy&&<div className="bom-loading" aria-hidden="true">{busy}</div>}
    {empty?<div className="empty bom-empty"><p>No BOM lines yet. Upload a BOM sheet (Excel or CSV) or the Gerber ZIP, load a board, or add parts one by one.</p>
      <div className="bom-empty-actions"><button className="button primary" onClick={()=>fileRef.current?.click()}><Upload size={16}/>Upload BOM or Gerber</button>{active&&<button className="button" onClick={()=>loadBoard(active)}><CircuitBoard size={16}/>Use {active.name}</button>}</div>

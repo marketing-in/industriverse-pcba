@@ -1,5 +1,5 @@
 import React from 'react';
-import {Layers,Factory,CircuitBoard,Workflow,Cpu,BookOpen,Calculator,Bookmark,BookMarked,Package,Wallet,Store,PlugZap,ClipboardList,Truck} from 'lucide-react';
+import {Layers,Factory,CircuitBoard,Workflow,Cpu,BookOpen,Calculator,Bookmark,BookMarked,Package,Wallet,Store,ClipboardList,Truck} from 'lucide-react';
 
 // The brand of Industriverse PCBA: the reel glyph of Supply, the Route mark, the Route chip and the
 // three lines with their pages. The mark is three joined squares: Engineering, Supply, Production.
@@ -23,11 +23,12 @@ export function RouteMark({size=28,className='brand-mark'}){
 export const SITE='Industriverse PCBA';
 export const HOME='Home';
 // Each page is [leaf id, label, icon]. The leaf id is what navigate() and the child components use;
-// the label is what people read (Jobs is the leaf 'Production', Price sources is 'Integrations').
+// the label is what people read (Jobs is the leaf 'Production'). Engineering is the board work; the
+// factory floor (the 3D SMT line and the machines) belongs to Production.
 export const LINES=[
- {id:'engineering',label:'Engineering',icon:Layers,ink:'#0B6569',pages:[['Board studio','Board studio',CircuitBoard],['SMT line','SMT line',Workflow],['Machines','Machines',Cpu],['Board types','Board types',BookOpen]]},
- {id:'supply',label:'Supply',icon:ReelIcon,ink:'#8C2760',pages:[['BOM tool','BOM tool',Calculator],['Saved lists','Saved lists',Bookmark],['Part master','Part master',BookMarked],['Inventory','Inventory',Package],['Purchases','Purchases',Wallet],['Vendors','Vendors',Store],['Integrations','Price sources',PlugZap]]},
- {id:'production',label:'Production',icon:Factory,ink:'#1F4FA8',pages:[['Production','Jobs',ClipboardList],['Dispatch','Dispatch',Truck]]},
+ {id:'engineering',label:'Engineering',icon:Layers,ink:'#0B6569',pages:[['Board studio','Board studio',CircuitBoard],['Board types','Board types',BookOpen]]},
+ {id:'supply',label:'Supply',icon:ReelIcon,ink:'#8C2760',pages:[['BOM tool','BOM tool',Calculator],['Saved lists','Saved lists',Bookmark],['Part master','Part master',BookMarked],['Inventory','Inventory',Package],['Purchases','Purchases',Wallet],['Vendors','Vendors',Store]]},
+ {id:'production',label:'Production',icon:Factory,ink:'#1F4FA8',pages:[['Production','Jobs',ClipboardList],['SMT line','SMT line',Workflow],['Machines','Machines',Cpu],['Dispatch','Dispatch',Truck]]},
 ];
 export const LINE_INK=Object.fromEntries(LINES.map(l=>[l.id,l.ink]));
 export const HUB_INK={light:'#131B23',dark:'#1B242D'};
@@ -37,14 +38,14 @@ export const LINE_OF=Object.fromEntries(PAGES.map(p=>[p.leaf,p.line]));
 export const lineById=id=>LINES.find(l=>l.id===id)||null;
 export const pageInfo=leaf=>PAGES.find(p=>p.leaf===leaf)||null;
 // Old links and bookmarks (#Overview, #Board%20studio, #Alerts …) keep working.
-export const LEGACY={Overview:HOME,Home:HOME,Help:HOME,Alerts:'Inventory',Sourcing:'Board studio','Component directory':'Part master','Price sources':'Integrations',Jobs:'Production','3D line':'SMT line'};
+export const LEGACY={Overview:HOME,Home:HOME,Help:HOME,Alerts:'Inventory',Sourcing:'Board studio','Component directory':'Part master',Jobs:'Production','3D line':'SMT line'};
 export const resolveLeaf=p=>{const x=LEGACY[p]||p;return LINE_OF[x]?x:HOME};
-// '#/' is Home, '#/<line>/<page>' a page, '#/<line>' the line's last-used page; anything else is an old page name.
+// '#/' is Home, '#/<line>/<page>' a page (a page that moved line is still found by its name), '#/<line>' the line's last-used page; anything else is an old page name.
 export function pageFromHash(raw,last={}){
  let h='';try{h=decodeURIComponent(String(raw||'').replace(/^#/,''))}catch{h=''}
  if(!h||h==='/')return HOME;
  if(h[0]==='/'){const [,l,s]=h.split('/');const ln=lineById(l);if(!ln)return HOME;
-  const p=s&&PAGES.find(q=>q.line===l&&q.slug===s);return p?p.leaf:(LINE_OF[last[l]]===l?last[l]:ln.pages[0][0])}
+  const p=s&&(PAGES.find(q=>q.line===l&&q.slug===s)||PAGES.find(q=>q.slug===s));return p?p.leaf:(LINE_OF[last[l]]===l?last[l]:ln.pages[0][0])}
  return resolveLeaf(h);
 }
 export const hashOf=leaf=>{const p=pageInfo(leaf);return p?`#/${p.line}/${p.slug}`:'#/'};

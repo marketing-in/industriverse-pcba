@@ -5,9 +5,9 @@ import {LINES,RouteMark,SITE} from './brand.jsx';
 // off and one button opens the workspace for this tab. Beside the form, the three lines drawn static:
 // the product's real structure, not a claim.
 const ABOUT={
- engineering:'Boards, Gerber files, part models and the 3D SMT line.',
+ engineering:'Boards, Gerber files, part models and 3D board views.',
  supply:'Bare PCB, components, prices, stock and vendors.',
- production:'Jobs, stages, shifts and kitting.',
+ production:'Jobs, the 3D SMT line, machines and dispatch.',
 };
 
 function AdminPanel({auth,onSignedIn,onOpen}){

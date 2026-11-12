@@ -106,7 +106,7 @@ export function Production({state,setState,boardModel=[],board,notify,onOpenList
  const ofBoard=j=>!!board&&((j.listId&&listBoards.get(j.listId)===board.id)||String(j.board||'').trim().toLowerCase()===String(board.name||'').trim().toLowerCase());
  const [onlyBoard,setOnlyBoard]=useState(false);
  const auto=state.auto!==false;const [setup,setSetup]=useState(false);
- // The factory is set up in Engineering, Machines when the shell passes onSetUpFactory; otherwise here.
+ // The factory is set up in Production, Machines when the shell passes onSetUpFactory; otherwise here.
  const openSetup=onSetUpFactory||(()=>setSetup(true));
  // Auto-calculator: on open and every minute, stages whose planned time has passed complete, finished
  // jobs free their lines, queued jobs start, and estimates update from the new history.
